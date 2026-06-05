@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonesta Foxborough — Sales Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #efefec;
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #9b9b97;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --chart-blue: #378ADD;
+    --chart-green: #639922;
+    --chart-red: #E24B4A;
+    --chart-amber: #EF9F27;
+    --chart-teal: #1D9E75;
+    --chart-gray: #888780;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #252523;
+      --bg3: #2e2e2b;
+      --text: #f0f0ed;
+      --text2: #a0a09c;
+      --text3: #6b6b67;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.18);
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg3);
+    color: var(--text);
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  .shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 0 1rem;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 0;
+  }
+  .prop-name { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .prop-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+  .topright { display: flex; align-items: center; gap: 12px; }
+  .ts { font-size: 11px; color: var(--text3); }
+  .rbtn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 14px; border: 0.5px solid var(--border2);
+    border-radius: var(--radius); background: var(--bg);
+    cursor: pointer; font-size: 12px; color: var(--text2);
+    transition: background 0.15s;
+  }
+  .rbtn:hover { background: var(--bg2); }
+
+  /* NAV */
+  .nav {
+    display: flex; gap: 0;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 1.75rem;
+    overflow-x: auto;
+  }
+  .nav-tab {
+    padding: .7rem 1.25rem; font-size: 13px; font-weight: 500;
+    color: var(--text2); border: none; background: transparent;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+    transition: color 0.15s;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* METRIC CARDS */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 1.25rem;
+  }
+  .mc {
+    background: var(--bg2); border-radius: var(--radius);
+    padding: .9rem 1rem;
+  }
+  .mc-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .mc-val { font-size: 22px; font-weight: 600; line-height: 1.15; }
+  .mc-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .mc-delta { font-size: 12px; margin-top: 3px; font-weight: 500; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .neu { color: var(--text2); }
+
+  /* CARDS */
+  .card {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1rem;
+  }
+
+  /* GRID LAYOUTS */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* TABLE */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th {
+    text-align: left; font-size: 11px; font-weight: 600; color: var(--text2);
+    padding: 6px 8px; border-bottom: 0.5px solid var(--border); white-space: nowrap;
+  }
+  .tbl td { padding: 9px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl tbody tr:hover td { background: var(--bg2); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 100px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .b-red { background: var(--red-bg); color: var(--red); }
+  .b-amber { background: var(--amber-bg); color: var(--amber); }
+  .b-green { background: var(--green-bg); color: var(--green); }
+  .b-blue { background: var(--blue-bg); color: var(--blue); }
+  .b-gray { background: var(--bg2); color: var(--text2); }
+
+  /* PROGRESS BARS */
+  .bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .bar-bg { height: 5px; border-radius: 3px; background: var(--border); flex: 1; overflow: hidden; min-width: 50px; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .f-red { background: var(--chart-red); }
+  .f-amb { background: var(--chart-amber); }
+  .f-grn { background: var(--chart-green); }
+  .f-blue { background: var(--chart-blue); }
+
+  /* ALERTS */
+  .alert {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-radius: var(--radius);
+    font-size: 13px; margin-bottom: 1rem;
+  }
+  .alert-red { background: var(--red-bg); color: var(--red); }
+  .alert-amber { background: var(--amber-bg); color: var(--amber); }
+  .alert-green { background: var(--green-bg); color: var(--green); }
+
+  /* RAG GRID */
+  .rag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .rag-card {
+    border-radius: var(--radius); border: 0.5px solid var(--border);
+    padding: .75rem; background: var(--bg);
+  }
+  .rag-mo { font-size: 11px; font-weight: 600; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+  .rag-rev { font-size: 15px; font-weight: 600; }
+  .rag-tgt { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .rag-var { font-size: 11px; font-weight: 600; margin-top: 4px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .dot-g { background: var(--chart-green); }
+  .dot-a { background: var(--chart-amber); }
+  .dot-r { background: var(--chart-red); }
+  .dot-x { background: var(--chart-gray); }
+
+  /* PIPELINE TABS */
+  .tab-row { display: flex; gap: 6px; margin-bottom: .75rem; flex-wrap: wrap; }
+  .ftab {
+    padding: 5px 13px; border-radius: var(--radius);
+    border: 0.5px solid var(--border); background: transparent;
+    cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text2);
+    transition: all 0.15s;
+  }
+  .ftab:hover { background: var(--bg2); }
+  .ftab.active { background: var(--text); color: var(--bg); border-color: transparent; }
+
+  /* CHART WRAPPERS */
+  .chart-wrap { position: relative; width: 100%; height: 200px; }
+  .chart-wrap-lg { position: relative; width: 100%; height: 260px; }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 11px; color: var(--text2); }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend-sq { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .legend-line { width: 14px; height: 2px; flex-shrink: 0; }
+
+  /* ACTION LIST */
+  .insight-row { display: flex; flex-direction: column; gap: 10px; }
+  .insight {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px; border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); background: var(--bg);
+  }
+  .insight-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .insight-body { flex: 1; }
+  .insight-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .insight-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .insight-action { font-size: 12px; margin-top: 6px; line-height: 1.6; }
+  .insight-pri { font-size: 11px; font-weight: 600; margin-top: 6px; }
+  .pri-1 { color: var(--red); }
+  .pri-2 { color: var(--amber); }
+  .pri-3 { color: var(--blue); }
+
+  /* UTILITY */
+  .empty { text-align: center; padding: 2.5rem; color: var(--text2); font-size: 13px; }
+  .loading { text-align: center; padding: 2rem; color: var(--text2); font-size: 13px; }
+  .err-banner {
+    padding: 10px 14px; background: var(--red-bg); border-radius: var(--radius);
+    font-size: 12px; color: var(--red); margin-bottom: 1rem; display: none;
+  }
+  .err-banner a { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div>
+      <div class="prop-name">Sonesta Foxborough — Sales Dashboard</div>
+      <div class="prop-sub">140 rooms &nbsp;·&nbsp; MA2605 &nbsp;·&nbsp; Gillette Stadium &nbsp;·&nbsp; BP ID 9085471</div>
+    </div>
+    <div class="topright">
+      <span class="ts" id="ts">Loading...</span>
+      <button class="rbtn" onclick="loadAll()">
+        <i class="ti ti-refresh"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div id="err" class="err-banner"></div>
+
+  <nav class="nav">
+    <button class="nav-tab active" onclick="showPage('overview',this)"><i class="ti ti-layout-dashboard"></i> Overview</button>
+    <button class="nav-tab" onclick="showPage('pipeline',this)"><i class="ti ti-building"></i> Group pipeline</button>
+    <button class="nav-tab" onclick="showPage('revenue',this)"><i class="ti ti-chart-bar"></i> Revenue</button>
+    <button class="nav-tab" onclick="showPage('channels',this)"><i class="ti ti-sitemap"></i> Channels</button>
+    <button class="nav-tab" onclick="showPage('actions',this)"><i class="ti ti-checklist"></i> Action list</button>
+  </nav>
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div class="page active" id="page-overview">
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-label">Rooms OTB today</div><div class="mc-val" id="k-rooms">—</div><div class="mc-sub" id="k-occ">Occ%: —</div></div>
+      <div class="mc"><div class="mc-label">ADR today</div><div class="mc-val" id="k-adr">—</div><div class="mc-sub" id="k-bar">BAR: —</div></div>
+      <div class="mc"><div class="mc-label">Today vs target</div><div class="mc-val" id="k-revvar">—</div><div class="mc-sub" id="k-revvar-sub">revenue variance</div></div>
+      <div class="mc"><div class="mc-label">MTD revenue</div><div class="mc-val" id="k-mtd">—</div><div class="mc-delta" id="k-mtdvar">vs target: —</div></div>
+      <div class="mc"><div class="mc-label">At-risk groups</div><div class="mc-val" id="k-atrisk" style="color:var(--red)">—</div><div class="mc-sub">need action now</div></div>
+      <div class="mc"><div class="mc-label">OTA dependency</div><div class="mc-val" id="k-ota">—</div><div class="mc-delta" id="k-ota-flag">YTD mix</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Revenue pace — 2026</div>
+        <div id="rag-overview"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Occ% trend — last 30 days</div>
+        <div class="chart-wrap"><canvas id="occChart" role="img" aria-label="Occupancy % trend last 30 days">Occ% trend</canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top at-risk groups</div>
+      <div id="risk-preview"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PIPELINE ═══ -->
+  <div class="page" id="page-pipeline">
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-label">Active groups</div><div class="mc-val" id="p-active">—</div></div>
+      <div class="mc"><div class="mc-label">At-risk groups</div><div class="mc-val" id="p-atrisk" style="color:var(--red)">—</div><div class="mc-sub">pickup &lt;50%, cutoff ≤14d</div></div>
+      <div class="mc"><div class="mc-label">Rooms at risk</div><div class="mc-val" id="p-rooms-risk" style="color:var(--red)">—</div><div class="mc-sub">not yet picked up</div></div>
+      <div class="mc"><div class="mc-label">Total rooms available</div><div class="mc-val" id="p-avail">—</div></div>
+      <div class="mc"><div class="mc-label">Past cutoff</div><div class="mc-val" id="p-pastco">—</div></div>
+      <div class="mc"><div class="mc-label">Lost / cancelled</div><div class="mc-val" id="p-lost">—</div></div>
+    </div>
+    <div class="tab-row">
+      <button class="ftab active" onclick="filterPipe('risk',this)"><i class="ti ti-alert-triangle" style="font-size:11px"></i> At-risk</button>
+      <button class="ftab" onclick="filterPipe('upcoming',this)">Cutoff ≤21d</button>
+      <button class="ftab" onclick="filterPipe('def',this)">All definite</button>
+      <button class="ftab" onclick="filterPipe('ten',this)">Tentative</button>
+      <button class="ftab" onclick="filterPipe('lost',this)">Lost / cancelled</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="pipe-body" style="overflow-x:auto"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ REVENUE ═══ -->
+  <div class="page" id="page-revenue">
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-label">MTD revenue</div><div class="mc-val" id="r-mtd">—</div><div class="mc-delta" id="r-mtdvar">—</div></div>
+      <div class="mc"><div class="mc-label">MTD ADR</div><div class="mc-val" id="r-mtd-adr">—</div></div>
+      <div class="mc"><div class="mc-label">MTD avg occ%</div><div class="mc-val" id="r-mtd-occ">—</div></div>
+      <div class="mc"><div class="mc-label">YTD revenue</div><div class="mc-val" id="r-ytd">—</div></div>
+      <div class="mc"><div class="mc-label">YTD vs target</div><div class="mc-val" id="r-ytd-var">—</div><div class="mc-delta" id="r-ytd-var-sub">—</div></div>
+      <div class="mc"><div class="mc-label">Best month</div><div class="mc-val" id="r-best-mo">—</div><div class="mc-sub" id="r-best-rev">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly revenue vs target</div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Revenue</span>
+        <span><span class="legend-line" style="background:var(--chart-red)"></span>Target</span>
+      </div>
+      <div class="chart-wrap-lg"><canvas id="revChart" role="img" aria-label="Monthly revenue vs target">Revenue chart</canvas></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Month-by-month detail</div>
+        <div id="monthly-tbl"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Transient vs group split</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Transient</span>
+          <span><span class="legend-sq" style="background:var(--chart-green)"></span>Group</span>
+        </div>
+        <div class="chart-wrap"><canvas id="splitChart" role="img" aria-label="Transient vs group split">Split chart</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CHANNELS ═══ -->
+  <div class="page" id="page-channels">
+    <div class="metric-grid">
+      <div class="mc"><div class="mc-label">OTA rooms YTD</div><div class="mc-val" id="c-ota-rooms">—</div><div class="mc-delta" id="c-ota-pct">—</div></div>
+      <div class="mc"><div class="mc-label">Direct rooms YTD</div><div class="mc-val" id="c-dir-rooms">—</div><div class="mc-delta" id="c-dir-pct">—</div></div>
+      <div class="mc"><div class="mc-label">Group rooms YTD</div><div class="mc-val" id="c-grp-rooms">—</div><div class="mc-delta" id="c-grp-pct">—</div></div>
+      <div class="mc"><div class="mc-label">Corporate rooms YTD</div><div class="mc-val" id="c-corp-rooms">—</div><div class="mc-delta" id="c-corp-pct">—</div></div>
+    </div>
+    <div id="ota-alert-banner"></div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">YTD channel mix</div>
+        <div class="chart-wrap"><canvas id="chanPieChart" role="img" aria-label="Channel mix doughnut chart">Channel mix</canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Channel trend by month</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-red)"></span>OTA</span>
+          <span><span class="legend-sq" style="background:var(--chart-green)"></span>Direct</span>
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Group</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chanTrendChart" role="img" aria-label="Channel trend by month">Channel trend</canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Channel detail</div>
+      <div id="chan-detail"></div>
+    </div>
+  </div>
+
+  <!-- ═══ ACTIONS ═══ -->
+  <div class="page" id="page-actions">
+    <div id="action-list" class="insight-row"><div class="loading">Building action list...</div></div>
+  </div>
+
+</div><!-- /shell -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const API  = 'AIzaSyDfB6MmmSm-Njym1M7NS-Pa_c6q3P9gxn8';
+const HUB  = '1fEN6Rliinp7_Llwpjs0wwoGIBGyzhFGjA76FF_oQHQ0';
+const ROOMS = 140;
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const today      = new Date().toISOString().slice(0,10);
+const thisMonth  = today.slice(0,7);
+const MN = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun',
+            '07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+const charts = {};
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[];
+
+// ─── NAV ───────────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── DATA FETCHING ─────────────────────────────────────────────────────────
+async function fetchTab(tab) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${HUB}/values/${encodeURIComponent(tab)}?key=${API}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Sheet "${tab}" → HTTP ${r.status}. Make sure the workbook is shared as Viewer (anyone with link).`);
+  const d = await r.json();
+  return d.values || [];
+}
+
+function toRows(vals) {
+  if (!vals || vals.length < 2) return [];
+  const h = vals[0];
+  return vals.slice(1)
+    .filter(row => row.some(c => c && c.trim()))
+    .map(row => { const o={}; h.forEach((k,i) => o[k]=(row[i]||'').trim()); return o; });
+}
+
+// Strip $, commas, % so "$123,581" and "41.16%" both parse correctly
+function n(v) {
+  if (v == null || v === '') return null;
+  const s = String(v).replace(/[$,%]/g,'').replace(/,/g,'').trim();
+  const x = parseFloat(s);
+  return isNaN(x) ? null : x;
+}
+
+function fmt(v)  { if (v==null) return '—'; return '$'+Math.round(v).toLocaleString('en-US'); }
+function fixOcc(v) { if (v==null) return null; return v < 2 ? v*100 : v; }
+
+// Normalize month key to YYYY-MM (zero-padded)
+function normMonth(raw) {
+  if (!raw) return null;
+  const m = raw.trim().match(/^(\d{4})-(\d{1,2})$/);
+  if (m) return m[1]+'-'+m[2].padStart(2,'0');
+  return null;
+}
+function moLabel(key) { return key ? (MN[key.slice(5)] || key) : '—'; }
+
+// ─── LOAD ALL ──────────────────────────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('ts').textContent = 'Refreshing...';
+  document.getElementById('err').style.display = 'none';
+  try {
+    const [fcV, rvV, chV, piV, moV] = await Promise.all([
+      fetchTab('Daily Forecast'), fetchTab('Daily Revenue'),
+      fetchTab('Channel Summary'), fetchTab('Group Pipeline'),
+      fetchTab('Monthly Summary'),
+    ]);
+    allFc = toRows(fcV);
+    allRv = toRows(rvV);
+    allCh = toRows(chV);
+    allPi = toRows(piV);
+    allMo = toRows(moV).map(r => ({...r, _mo: normMonth(r['Month'])})).filter(r => r._mo);
+
+    renderKPIs();
+    renderOverviewRAG();
+    renderOccChart();
+    renderRiskPreview();
+    renderPipeMetrics();
+    filterPipe('risk', document.querySelector('#page-pipeline .ftab.active'));
+    renderRevenue();
+    renderChannels();
+    renderActions();
+
+    document.getElementById('ts').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    const b = document.getElementById('err');
+    b.style.display = 'block';
+    b.innerHTML = '⚠ ' + e.message;
+    document.getElementById('ts').textContent = 'Error';
+    console.error(e);
+  }
+}
+
+// ─── KPIs ──────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const fc  = allFc.find(r => r['Date'] === today);
+  const rv  = allRv.find(r => r['Date'] === today);
+
+  const rooms   = fc ? n(fc['Total Rooms']) : null;
+  const occ     = fc ? fixOcc(n(fc['Occ%'])) : null;
+  const adr     = fc ? n(fc['ADR Actual']) : null;
+  const bar     = fc ? n(fc['BAR']) : null;
+  const revRow  = fc ? n(fc['Room Revenue']) : null;
+  const calcRev = (rooms!=null && adr!=null && !revRow) ? rooms*adr : revRow;
+  const revTgt  = rv ? n(rv['Rev Target']) : null;
+  const revVar  = (calcRev!=null && revTgt!=null) ? calcRev-revTgt : null;
+
+  document.getElementById('k-rooms').textContent = rooms!=null ? rooms : '—';
+  document.getElementById('k-occ').textContent   = 'Occ%: '+(occ!=null ? (Math.round(occ*10)/10)+'%' : '—');
+  document.getElementById('k-adr').textContent   = adr!=null ? fmt(adr) : '—';
+  document.getElementById('k-bar').textContent   = 'BAR: '+(bar!=null ? fmt(bar) : '—');
+
+  const rvEl  = document.getElementById('k-revvar');
+  const rvSub = document.getElementById('k-revvar-sub');
+  if (revVar!=null) {
+    rvEl.textContent  = (revVar>=0?'+':'')+fmt(revVar);
+    rvEl.style.color  = revVar>=0 ? 'var(--green)' : 'var(--red)';
+    rvSub.textContent = 'vs '+fmt(revTgt)+' target';
+  }
+
+  const mtdRv  = allRv.filter(r => r['Date'] && r['Date'].startsWith(thisMonth));
+  const mtdRev = mtdRv.reduce((s,r) => s+(n(r['Room Revenue'])||0), 0);
+  const mtdTgt = mtdRv.reduce((s,r) => s+(n(r['Rev Target'])||0), 0);
+  const mtdVar = mtdRev - mtdTgt;
+  document.getElementById('k-mtd').textContent = mtdRev>0 ? fmt(mtdRev) : '—';
+  const mvEl = document.getElementById('k-mtdvar');
+  if (mtdRev>0) {
+    mvEl.textContent = (mtdVar>=0?'+':'')+fmt(mtdVar)+' vs target';
+    mvEl.className   = 'mc-delta '+(mtdVar>=0?'up':'down');
+  }
+
+  const atRisk = allPi.filter(r => r['At Risk?']==='YES').length;
+  document.getElementById('k-atrisk').textContent = atRisk;
+
+  const chanYTD = allCh.filter(r => r['Date'] && r['Date']<=today && r['Date']>='2026-01-01');
+  const tot     = chanYTD.reduce((s,r) => s+(n(r['Total Rooms'])||0), 0) || 1;
+  const ota     = chanYTD.reduce((s,r) => s+(n(r['OTA Rooms'])||0), 0);
+  const otaPct  = Math.round(ota/tot*100);
+  document.getElementById('k-ota').textContent = otaPct+'%';
+  const otaFl = document.getElementById('k-ota-flag');
+  if (otaPct>=80)      { otaFl.textContent='⚠ High risk';     otaFl.className='mc-delta down'; }
+  else if (otaPct>=60) { otaFl.textContent='Monitor closely';  otaFl.className='mc-delta neu';  }
+  else                 { otaFl.textContent='Healthy mix';      otaFl.className='mc-delta up';   }
+}
+
+// ─── RAG ───────────────────────────────────────────────────────────────────
+function renderOverviewRAG() {
+  const MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06',
+                  '2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  let html = '<div class="rag-grid">';
+  MONTHS.forEach(mo => {
+    const row    = allMo.find(r => r._mo===mo);
+    const isCur  = mo===thisMonth;
+    const isPast = mo<thisMonth;
+    let rev = row ? n(row['Room Revenue']) : null;
+    let tgt = row ? n(row['Revenue Target']) : null;
+
+    if (isCur && !rev) {
+      const mtd = allRv.filter(r => r['Date'] && r['Date'].startsWith(mo));
+      rev = mtd.reduce((s,r) => s+(n(r['Room Revenue'])||0), 0) || null;
+      tgt = mtd.reduce((s,r) => s+(n(r['Rev Target'])||0), 0)   || null;
+    }
+    if (!rev && !tgt && mo>thisMonth) return;
+
+    const varPct = (rev && tgt && tgt>500) ? ((rev-tgt)/tgt*100) : null;
+    let dotC='dot-x', varStr='';
+    if (varPct!=null) {
+      if (varPct>=3)      { dotC='dot-g'; varStr='+'+(Math.round(varPct*10)/10)+'%'; }
+      else if (varPct>=-5){ dotC='dot-a'; varStr=(varPct>=0?'+':'')+(Math.round(varPct*10)/10)+'%'; }
+      else                { dotC='dot-r'; varStr=(Math.round(varPct*10)/10)+'%'; }
+    }
+    const label = isCur ? moLabel(mo)+' MTD' : (isPast ? moLabel(mo)+' ✓' : moLabel(mo));
+    html += `<div class="rag-card">
+      <div class="rag-mo"><span class="dot ${dotC}"></span>${label}</div>
+      <div class="rag-rev">${rev ? fmt(rev) : '—'}</div>
+      <div class="rag-tgt">${tgt ? 'vs '+fmt(tgt) : 'No target'}</div>
+      ${varPct!=null ? `<div class="rag-var" style="color:${varPct>=-5?'var(--green)':'var(--red)'}">${varStr}</div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('rag-overview').innerHTML = html;
+}
+
+// ─── OCC CHART ─────────────────────────────────────────────────────────────
+function renderOccChart() {
+  const ago = new Date(); ago.setDate(ago.getDate()-30);
+  const cut = ago.toISOString().slice(0,10);
+  const rows = allFc.filter(r => r['Date']>=cut && r['Date']<=today && n(r['Occ%'])!=null);
+  const labels = rows.map(r => r['Date'].slice(5));
+  const data   = rows.map(r => Math.round(fixOcc(n(r['Occ%']))*10)/10);
+  if (charts.occ) charts.occ.destroy();
+  charts.occ = new Chart(document.getElementById('occChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Occ%', data, borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,0.08)', borderWidth:2, pointRadius:0, fill:true, tension:0.3 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+'%'}} },
+      scales:{ x:{ticks:{maxTicksLimit:8,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
+               y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}} } }
+  });
+}
+
+// ─── RISK PREVIEW ──────────────────────────────────────────────────────────
+function renderRiskPreview() {
+  const risk = allPi.filter(r => r['At Risk?']==='YES')
+    .sort((a,b) => (n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999))
+    .slice(0,5);
+  const el = document.getElementById('risk-preview');
+  if (!risk.length) { el.innerHTML='<div class="empty">No at-risk groups right now.</div>'; return; }
+  let html = '<table class="tbl"><thead><tr><th>Group</th><th>Arrival</th><th>Pickup</th><th>Rooms available</th><th>Cutoff</th></tr></thead><tbody>';
+  risk.forEach(r => {
+    const p   = n(r['Pickup %']);
+    const dtc = n(r['Days to Cutoff']);
+    const fc  = p==null?'f-red':p>=50?'f-amb':'f-red';
+    html += `<tr>
+      <td><div style="font-weight:600">${r['Block Name']||'—'}</div>
+          <div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div></td>
+      <td>${r['Arrival']||'—'}</td>
+      <td><div class="bar-wrap">
+        <div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
+        <span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span>
+      </div></td>
+      <td style="font-weight:600;color:var(--red)">${r['Rooms Available']||'—'}</td>
+      <td style="color:${dtc!=null&&dtc<=7?'var(--red)':'var(--amber)'}">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ─── PIPELINE ──────────────────────────────────────────────────────────────
+function renderPipeMetrics() {
+  const active   = allPi.filter(r => r['Status']!=='CAN' && r['Status']!=='LOS');
+  const lost     = allPi.filter(r => r['Status']==='CAN' || r['Status']==='LOS');
+  const risk     = allPi.filter(r => r['At Risk?']==='YES');
+  const pastCo   = active.filter(r => (n(r['Days to Cutoff'])||1) < 0);
+  const riskRooms= risk.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
+  const availRooms= active.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
+  document.getElementById('p-active').textContent     = active.length;
+  document.getElementById('p-atrisk').textContent     = risk.length;
+  document.getElementById('p-rooms-risk').textContent = riskRooms;
+  document.getElementById('p-avail').textContent      = availRooms;
+  document.getElementById('p-pastco').textContent     = pastCo.length;
+  document.getElementById('p-lost').textContent       = lost.length;
+}
+
+function filterPipe(mode, btn) {
+  document.querySelectorAll('#page-pipeline .ftab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  let rows = allPi;
+  if (mode==='risk')     rows = rows.filter(r => r['At Risk?']==='YES');
+  else if (mode==='upcoming') rows = rows.filter(r => { const d=n(r['Days to Cutoff']); return d!=null&&d>=0&&d<=21&&r['Status']!=='CAN'&&r['Status']!=='LOS'; });
+  else if (mode==='def') rows = rows.filter(r => r['Status']==='DEF');
+  else if (mode==='ten') rows = rows.filter(r => r['Status']==='TEN');
+  else if (mode==='lost')rows = rows.filter(r => r['Status']==='CAN'||r['Status']==='LOS');
+
+  rows = rows.slice().sort((a,b) => {
+    const ar=a['At Risk?']==='YES'?0:1, br=b['At Risk?']==='YES'?0:1;
+    if (ar!==br) return ar-br;
+    return (n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999);
+  });
+
+  const body = document.getElementById('pipe-body');
+  if (!rows.length) { body.innerHTML='<div class="empty">No groups match this filter.</div>'; return; }
+
+  let html = '<table class="tbl"><thead><tr>'
+    +'<th style="padding:8px 14px">Group</th><th>Arrival</th><th>Status</th>'
+    +'<th>Pickup</th><th>Avail</th><th>Cutoff</th><th>Flag</th>'
+    +'</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const p   = n(r['Pickup %']);
+    const dtc = n(r['Days to Cutoff']);
+    const isR = r['At Risk?']==='YES';
+    const fc  = p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
+    const sb  = r['Status']==='DEF' ? '<span class="badge b-green">DEF</span>'
+              : r['Status']==='TEN' ? '<span class="badge b-amber">TEN</span>'
+              : r['Status']==='CAN' ? '<span class="badge b-red">CAN</span>'
+              : r['Status']==='LOS' ? '<span class="badge b-gray">LOS</span>'
+              : `<span class="badge b-blue">${r['Status']||'—'}</span>`;
+    const fb  = isR
+              ? '<span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span>'
+              : dtc!=null&&dtc<=7 ? '<span class="badge b-amber">Cutoff soon</span>'
+              : '<span class="badge b-gray">OK</span>';
+    html += `<tr>
+      <td style="padding:10px 14px">
+        <div style="font-weight:600">${r['Block Name']||'—'}</div>
+        <div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div>
+      </td>
+      <td>${r['Arrival']||'—'}</td>
+      <td>${sb}</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
+          <span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2)">${r['Rooms Picked Up']||'0'}/${r['Current Block']||'0'}</div>
+      </td>
+      <td style="font-weight:600">${r['Rooms Available']||'—'}</td>
+      <td style="font-size:12px;color:${dtc!=null&&dtc<=7?'var(--red)':dtc!=null&&dtc<=14?'var(--amber)':'var(--text2)'}">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</td>
+      <td>${fb}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ─── REVENUE ───────────────────────────────────────────────────────────────
+function renderRevenue() {
+  const MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06',
+                  '2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const moData = MONTHS.map(mo => {
+    const row  = allMo.find(r => r._mo===mo);
+    let rev    = row ? n(row['Room Revenue'])    : null;
+    let tgt    = row ? n(row['Revenue Target'])  : null;
+    let rooms  = row ? n(row['Total Rooms'])     : null;
+    let occ    = row ? n(row['Avg Occ%'])        : null;
+    let trn    = row ? n(row['Transient %'])     : null;
+    let grp    = row ? n(row['Group %'])         : null;
+    if (mo===thisMonth && !rev) {
+      const mtd = allRv.filter(r => r['Date'] && r['Date'].startsWith(mo));
+      rev   = mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
+      tgt   = mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)  ||null;
+      rooms = mtd.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0) ||null;
+    }
+    return { mo, rev, tgt, rooms, occ, trn, grp };
+  }).filter(d => d.rev!=null || d.rooms!=null);
+
+  // YTD metrics
+  const ytd    = moData.filter(d=>d.mo<=thisMonth).reduce((s,d)=>s+(d.rev||0),0);
+  const ytdTgt = moData.filter(d=>d.mo<=thisMonth&&d.tgt).reduce((s,d)=>s+(d.tgt||0),0);
+  document.getElementById('r-ytd').textContent = ytd>0 ? fmt(ytd) : '—';
+  if (ytd>0 && ytdTgt>0) {
+    const ytdVar = ytd-ytdTgt;
+    document.getElementById('r-ytd-var').textContent    = (ytdVar>=0?'+':'')+fmt(ytdVar);
+    document.getElementById('r-ytd-var').style.color    = ytdVar>=0?'var(--green)':'var(--red)';
+    document.getElementById('r-ytd-var-sub').textContent= (Math.round(ytdVar/ytdTgt*1000)/10)+'% vs target';
+    document.getElementById('r-ytd-var-sub').className  = 'mc-delta '+(ytdVar>=0?'up':'down');
+  }
+
+  // MTD metrics
+  const mtdD = moData.find(d=>d.mo===thisMonth);
+  if (mtdD) {
+    document.getElementById('r-mtd').textContent = fmt(mtdD.rev);
+    if (mtdD.tgt) {
+      const mv = mtdD.rev-(mtdD.tgt||0);
+      const mvEl = document.getElementById('r-mtdvar');
+      mvEl.textContent = (mv>=0?'+':'')+fmt(mv)+' vs target';
+      mvEl.className   = 'mc-delta '+(mv>=0?'up':'down');
+    }
+    const mtdRows  = allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
+    const totRooms = mtdRows.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0);
+    const totRev   = mtdRows.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
+    const adr      = totRooms>0 ? Math.round(totRev/totRooms) : null;
+    document.getElementById('r-mtd-adr').textContent = adr ? fmt(adr) : '—';
+    const occ = mtdD.occ ? Math.round(fixOcc(mtdD.occ)*10)/10 : null;
+    document.getElementById('r-mtd-occ').textContent = occ ? occ+'%' : '—';
+  }
+
+  // Best month
+  const pastMos = moData.filter(d=>d.mo<thisMonth&&d.rev);
+  if (pastMos.length) {
+    const best = pastMos.reduce((a,b)=>b.rev>a.rev?b:a);
+    document.getElementById('r-best-mo').textContent  = moLabel(best.mo);
+    document.getElementById('r-best-rev').textContent = fmt(best.rev);
+  }
+
+  // Revenue vs target chart
+  if (charts.rev) charts.rev.destroy();
+  charts.rev = new Chart(document.getElementById('revChart'), {
+    type: 'bar',
+    data: {
+      labels: moData.map(d=>moLabel(d.mo)),
+      datasets: [
+        { label:'Revenue', data:moData.map(d=>d.rev?Math.round(d.rev):null), backgroundColor:'#378ADD', borderRadius:3, order:2 },
+        { label:'Target',  data:moData.map(d=>d.tgt?Math.round(d.tgt):null), type:'line', borderColor:'#E24B4A', borderWidth:2, pointRadius:3, pointBackgroundColor:'#E24B4A', fill:false, tension:0, order:1 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}} },
+      scales:{ x:{ticks:{font:{size:11},color:'#888780'},grid:{display:false}},
+               y:{ticks:{callback:v=>'$'+Math.round(v/1000)+'k',font:{size:11},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}} } }
+  });
+
+  // Transient vs group split
+  if (charts.split) charts.split.destroy();
+  charts.split = new Chart(document.getElementById('splitChart'), {
+    type: 'bar',
+    data: {
+      labels: moData.map(d=>moLabel(d.mo)),
+      datasets: [
+        { label:'Transient %', data:moData.map(d=>d.trn?Math.round(d.trn):null), backgroundColor:'#378ADD', borderRadius:2 },
+        { label:'Group %',     data:moData.map(d=>d.grp?Math.round(d.grp):null), backgroundColor:'#639922', borderRadius:2 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+               y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}} } }
+  });
+
+  // Monthly table
+  let tbl = '<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Occ%</th></tr></thead><tbody>';
+  moData.forEach(d => {
+    const vd = (d.rev && d.tgt && d.tgt>1000) ? d.rev-d.tgt : null;
+    const vp = (vd && d.tgt) ? Math.round(vd/d.tgt*100) : null;
+    const vc = vd==null?'':vd>=0?'up':'down';
+    const occ = d.occ ? Math.round(fixOcc(d.occ)*10)/10 : null;
+    const sfx = d.mo===thisMonth?' (MTD)':d.mo<thisMonth?' ✓':'';
+    tbl += `<tr>
+      <td style="font-weight:600">${moLabel(d.mo)}${sfx}</td>
+      <td>${fmt(d.rev)}</td><td>${fmt(d.tgt)}</td>
+      <td class="${vc}">${vd!=null?(vd>=0?'+':'')+fmt(vd)+' ('+(vp>=0?'+':'')+vp+'%)':'—'}</td>
+      <td>${occ!=null?occ+'%':'—'}</td>
+    </tr>`;
+  });
+  tbl += '</tbody></table>';
+  document.getElementById('monthly-tbl').innerHTML = tbl;
+}
+
+// ─── CHANNELS ──────────────────────────────────────────────────────────────
+function renderChannels() {
+  const rows = allCh.filter(r => r['Date'] && r['Date']<='2026-12-31' && r['Date']>='2026-01-01' && r['Date']<=today);
+  const tot  = rows.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0) || 1;
+  const ota  = rows.reduce((s,r)=>s+(n(r['OTA Rooms'])||0),0);
+  const dir  = rows.reduce((s,r)=>s+(n(r['Direct Rooms'])||0),0);
+  const grp  = rows.reduce((s,r)=>s+(n(r['Group Rooms'])||0),0);
+  const corp = rows.reduce((s,r)=>s+(n(r['Corporate Rooms'])||0),0);
+  const gov  = rows.reduce((s,r)=>s+(n(r['Government Rooms'])||0),0);
+  const whl  = rows.reduce((s,r)=>s+(n(r['Wholesale Rooms'])||0),0);
+  const other= Math.max(tot-ota-dir-grp-corp-gov-whl, 0);
+  const p    = v => Math.round(v/tot*100);
+
+  document.getElementById('c-ota-rooms').textContent  = Math.round(ota).toLocaleString();
+  document.getElementById('c-ota-pct').textContent    = p(ota)+'% of total';
+  document.getElementById('c-ota-pct').className      = 'mc-delta '+(p(ota)>=70?'down':p(ota)>=50?'neu':'up');
+  document.getElementById('c-dir-rooms').textContent  = Math.round(dir).toLocaleString();
+  document.getElementById('c-dir-pct').textContent    = p(dir)+'% of total';
+  document.getElementById('c-grp-rooms').textContent  = Math.round(grp).toLocaleString();
+  document.getElementById('c-grp-pct').textContent    = p(grp)+'% of total';
+  document.getElementById('c-corp-rooms').textContent = Math.round(corp).toLocaleString();
+  document.getElementById('c-corp-pct').textContent   = p(corp)+'% of total';
+
+  const otaPct = p(ota);
+  document.getElementById('ota-alert-banner').innerHTML =
+    otaPct>=80 ? `<div class="alert alert-red"><i class="ti ti-alert-circle"></i> OTA at ${otaPct}% — critically high. Direct booking push is urgent.</div>` :
+    otaPct>=60 ? `<div class="alert alert-amber"><i class="ti ti-alert-circle"></i> OTA at ${otaPct}% — above healthy range. Build direct channels actively.</div>` :
+    `<div class="alert alert-green"><i class="ti ti-check"></i> OTA at ${otaPct}% — within acceptable range.</div>`;
+
+  const channels = [
+    {label:'OTA',       rooms:ota,  color:'#E24B4A'},
+    {label:'Direct',    rooms:dir,  color:'#639922'},
+    {label:'Group',     rooms:grp,  color:'#378ADD'},
+    {label:'Corporate', rooms:corp, color:'#EF9F27'},
+    {label:'Government',rooms:gov,  color:'#888780'},
+    {label:'Wholesale', rooms:whl,  color:'#1D9E75'},
+    {label:'Other',     rooms:other,color:'#B4B2A9'},
+  ];
+
+  if (charts.pie) charts.pie.destroy();
+  charts.pie = new Chart(document.getElementById('chanPieChart'), {
+    type: 'doughnut',
+    data: { labels:channels.map(c=>c.label), datasets:[{ data:channels.map(c=>Math.round(c.rooms)), backgroundColor:channels.map(c=>c.color), borderWidth:0, hoverOffset:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toLocaleString()+' ('+Math.round(c.parsed/tot*100)+'%)'}} } }
+  });
+
+  const trendMos = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'].filter(m=>m<=thisMonth);
+  const trendLbls= trendMos.map(m=>MN[m.slice(5)]);
+  const moOTA    = trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['OTA Rooms'])||0),0));
+  const moDir    = trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['Direct Rooms'])||0),0));
+  const moGrp    = trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['Group Rooms'])||0),0));
+
+  if (charts.trend) charts.trend.destroy();
+  charts.trend = new Chart(document.getElementById('chanTrendChart'), {
+    type: 'bar',
+    data: { labels:trendLbls, datasets:[
+      {label:'OTA',    data:moOTA, backgroundColor:'#E24B4A', borderRadius:2},
+      {label:'Direct', data:moDir, backgroundColor:'#639922', borderRadius:2},
+      {label:'Group',  data:moGrp, backgroundColor:'#378ADD', borderRadius:2},
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+               y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}} } }
+  });
+
+  let det = '<table class="tbl"><thead><tr><th>Channel</th><th>Rooms YTD</th><th>Share</th></tr></thead><tbody>';
+  channels.forEach(c => {
+    const sh = Math.round(c.rooms/tot*100);
+    det += `<tr>
+      <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.color};margin-right:6px;vertical-align:middle"></span>${c.label}</td>
+      <td>${Math.round(c.rooms).toLocaleString()}</td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${sh}%;background:${c.color}"></div></div><span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${sh}%</span></div></td>
+    </tr>`;
+  });
+  det += '</tbody></table>';
+  document.getElementById('chan-detail').innerHTML = det;
+}
+
+// ─── ACTIONS ───────────────────────────────────────────────────────────────
+function renderActions() {
+  const actions = [];
+  const risk = allPi.filter(r => r['At Risk?']==='YES');
+
+  if (risk.length) {
+    const riskRooms = risk.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
+    const estLoss   = riskRooms * 150;
+    actions.push({pri:1, icon:'ti-alert-triangle', color:'var(--red)',
+      title: `${risk.length} group${risk.length>1?'s':''} at risk — ${riskRooms} rooms, ~${fmt(estLoss)} potential revenue`,
+      desc:  risk.slice(0,4).map(r=>`<b>${r['Block Name']}</b>: ${Math.round(n(r['Pickup %'])||0)}% pickup · cutoff ${n(r['Days to Cutoff'])<0?'past':n(r['Days to Cutoff'])+'d away'}`).join('<br>'),
+      action:'Call group contacts directly. Push for pickups, extend cutoff if justified, or release rooms early to sell as transient.'
+    });
+  }
+
+  const ytdCh  = allCh.filter(r=>r['Date']&&r['Date']<=today&&r['Date']>='2026-01-01');
+  const ytdTot = ytdCh.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0)||1;
+  const ytdOTA = ytdCh.reduce((s,r)=>s+(n(r['OTA Rooms'])||0),0);
+  const otaPct = Math.round(ytdOTA/ytdTot*100);
+  if (otaPct>=60) {
+    const estComm = Math.round(ytdOTA*150*0.18);
+    actions.push({pri:2, icon:'ti-world', color:'var(--amber)',
+      title: `OTA at ${otaPct}% YTD — est. ${fmt(estComm)} paid in OTA commissions`,
+      desc:  `Each OTA booking costs ~18% in commission vs near-zero for direct. At current mix this is a significant drag on net revenue.`,
+      action:'Promote Sonesta loyalty rates at check-in, enable Best Rate Guarantee messaging, and pursue direct corporate contracts.'
+    });
+  }
+
+  const cutSoon = allPi.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=14&&r['At Risk?']!=='YES'&&r['Status']!=='CAN'&&r['Status']!=='LOS';});
+  if (cutSoon.length) {
+    actions.push({pri:2, icon:'ti-calendar-event', color:'var(--amber)',
+      title: `${cutSoon.length} group cutoff${cutSoon.length>1?'s':''} approaching in next 14 days`,
+      desc:  cutSoon.map(r=>`<b>${r['Block Name']}</b> — ${Math.round(n(r['Pickup %'])||0)}% pickup, ${r['Days to Cutoff']}d`).join('<br>'),
+      action:'Verify pickup status with group coordinators. Decide whether to extend, release, or hold each block.'
+    });
+  }
+
+  const mtdRv  = allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
+  const mtdRev = mtdRv.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
+  const mtdTgt = mtdRv.reduce((s,r)=>s+(n(r['Rev Target'])||0),0);
+  if (mtdTgt>1000 && mtdRev<mtdTgt*0.95) {
+    const gap      = mtdTgt-mtdRev;
+    const daysLeft = new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate()-new Date().getDate();
+    actions.push({pri:2, icon:'ti-chart-bar-off', color:'var(--amber)',
+      title: `${MN[thisMonth.slice(5)]} revenue ${fmt(gap)} behind target with ${daysLeft} days left`,
+      desc:  `Current: ${fmt(mtdRev)} vs target ${fmt(mtdTgt)}. Need ${fmt(gap/(daysLeft||1))}/day to close the gap.`,
+      action:'Consider last-minute promotions, weekend packages, or targeted outreach to past corporate accounts.'
+    });
+  }
+
+  const ten = allPi.filter(r=>r['Status']==='TEN');
+  if (ten.length) {
+    const tenRooms = ten.reduce((s,r)=>s+(n(r['Current Block'])||0),0);
+    actions.push({pri:3, icon:'ti-clock', color:'var(--blue)',
+      title: `${ten.length} tentative group${ten.length>1?'s':''} (${tenRooms} rooms) awaiting conversion`,
+      desc:  ten.map(r=>r['Block Name']).join(', '),
+      action:'Follow up to convert TEN → DEF. If unlikely to confirm, release blocks to open transient inventory.'
+    });
+  }
+
+  const priLabel = {1:'Priority 1 — Urgent',2:'Priority 2 — This week',3:'Priority 3 — Parallel track'};
+  const priClass = {1:'pri-1',2:'pri-2',3:'pri-3'};
+  if (!actions.length) {
+    document.getElementById('action-list').innerHTML='<div class="empty">No urgent actions flagged. All groups tracking well.</div>';
+    return;
+  }
+  document.getElementById('action-list').innerHTML = actions.map(a => `
+    <div class="insight">
+      <i class="ti ${a.icon} insight-icon" style="color:${a.color}" aria-hidden="true"></i>
+      <div class="insight-body">
+        <div class="insight-title">${a.title}</div>
+        <div class="insight-desc">${a.desc}</div>
+        <div class="insight-action"><strong>Action:</strong> ${a.action}</div>
+        <div class="insight-pri ${priClass[a.pri]}">${priLabel[a.pri]}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
