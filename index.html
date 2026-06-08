@@ -502,6 +502,10 @@ function toRows(vals){
   return vals.slice(1).filter(row=>row.some(c=>c&&c.trim())).map(row=>{const o={};h.forEach((k,i)=>o[k]=(row[i]||'').trim());return o;});
 }
 function n(v){ if(v==null||v==='')return null; const s=String(v).replace(/[$,%]/g,'').replace(/,/g,'').trim(); const x=parseFloat(s); return isNaN(x)?null:x; }
+// Revenue for a Block Info row = Rooms Picked Up × Avg Rate (only when rooms > 0)
+// Night Revenue column from Opera is ignored — it includes 0-room rows with committed revenue
+function biCalcRev(r){ const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); if(!rooms||rooms<=0||!rate)return 0; return rooms*rate; }
+function biHasRooms(r){ return (n(r['Rooms Picked Up'])||0)>0; }
 function fmt(v){ if(v==null)return'—'; return'$'+Math.round(v).toLocaleString('en-US'); }
 function fmtK(v){ if(v==null)return'—'; if(Math.abs(v)>=1000000) return'$'+(v/1000000).toFixed(1)+'M'; if(Math.abs(v)>=1000) return'$'+(v/1000).toFixed(1)+'k'; return'$'+Math.round(v).toLocaleString(); }
 function fixOcc(v){ if(v==null)return null; return v<2?v*100:v; }
@@ -782,21 +786,22 @@ function renderGrKPIs(){
   const lost=allPi.filter(r=>effectiveStatus(r)==='LOS');
 
   // Total room nights from Block Info Raw (only definite/tentative/act)
+  // Only rows with Rooms Picked Up > 0 — biCalcRev = rooms × rate
   const biActive=allBi.filter(r=>{
+    if(!biHasRooms(r))return false;
     const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
-    if(!pipe)return true; // include if no pipeline match
-    const eff=effectiveStatus(pipe);
-    return eff!=='LOS';
+    if(!pipe)return true;
+    return effectiveStatus(pipe)!=='LOS';
   });
   const totalNights=biActive.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-  const totalRev=biActive.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  const totalRev=biActive.reduce((s,r)=>s+biCalcRev(r),0);
   const avgRate=totalNights>0?totalRev/totalNights:null;
 
-  // OTB revenue estimate: pipeline rooms picked up × avg rate from Block Info
+  // OTB revenue: active pipeline blocks — rooms picked up × avg rate from Block Info
   const otbRooms=active.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
   const otbRev=active.reduce((s,r)=>{
     const ar=n(r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
-    return s+(ar&&rp?ar*rp:0);
+    return s+(ar&&rp&&rp>0?ar*rp:0);
   },0);
 
   // Rooms at risk
@@ -839,21 +844,18 @@ function renderGrKPIs(){
 function renderGrSummaryCharts(){
   const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
 
-  // Revenue by month from Block Info Raw
+  // Revenue by month from Block Info Raw — rooms × rate, only rows with rooms > 0
   const moActual=MONTHS.map(mo=>{
-    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
-    return rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
+    return rows.reduce((s,r)=>s+biCalcRev(r),0);
   });
-  // OTB forecast by month (pipeline rooms picked up × avg rate, future months)
+  // OTB forecast by month — pipeline blocks with no Block Info data yet
   const moForecast=MONTHS.map(mo=>{
-    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
-    if(rows.length>0) return null; // have actual data, don't show forecast
-    // No Block Info for this month → estimate from pipeline
-    const pipe=allPi.filter(r=>{const arr=r['Arrival']||'';return arr.startsWith(mo);});
-    return pipe.reduce((s,r)=>{
-      const ar=n(r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
-      return s+(ar&&rp?ar*rp:0);
-    },0)||null;
+    const hasBI=allBi.some(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
+    if(hasBI) return null;
+    const pipe=allPi.filter(r=>(r['Arrival']||'').startsWith(mo)&&effectiveStatus(r)!=='LOS');
+    const v=pipe.reduce((s,r)=>{const ar=n(r['Avg Rate']);const rp=n(r['Rooms Picked Up']);return s+(ar&&rp&&rp>0?ar*rp:0);},0);
+    return v>0?v:null;
   });
 
   if(charts.grRevMonth)charts.grRevMonth.destroy();
@@ -868,11 +870,12 @@ function renderGrSummaryCharts(){
               y:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
 
-  // Revenue by market type (from pipeline Actual Revenue)
+  // Revenue by market type — sum biCalcRev per block, grouped by market
   const markets={GRS:0,GRO:0,GRM:0,Other:0};
   allPi.forEach(r=>{
-    const m=r['Market Type']||'Other'; const v=n(r['Actual Revenue'])||0;
-    if(markets[m]!==undefined)markets[m]+=v; else markets['Other']+=v;
+    const m=r['Market Type']||'Other';
+    const blockRev=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
+    if(markets[m]!==undefined)markets[m]+=blockRev; else markets['Other']+=blockRev;
   });
   const mKeys=Object.keys(markets).filter(k=>markets[k]>0);
   const mColors=['#378ADD','#639922','#EF9F27','#888780'];
@@ -883,11 +886,11 @@ function renderGrSummaryCharts(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)}}}}
   });
 
-  // ADR by month (from Block Info)
+  // ADR by month — only rows with Rooms Picked Up > 0, use rooms × rate
   const moADR=MONTHS.map(mo=>{
-    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
     const nights=rows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-    const rev=rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    const rev=rows.reduce((s,r)=>s+biCalcRev(r),0);
     return nights>0?rev/nights:null;
   });
   if(charts.grAdr)charts.grAdr.destroy();
@@ -962,7 +965,11 @@ function renderGrByBlock(){
   });
 
   rows=rows.slice().sort((a,b)=>{
-    if(sortF==='rev') return (n(b['Actual Revenue'])||0)-(n(a['Actual Revenue'])||0);
+    if(sortF==='rev'){
+      const ra=allBi.filter(x=>x['Block Code']===a['Block Code']&&biHasRooms(x)).reduce((s,x)=>s+biCalcRev(x),0);
+      const rb=allBi.filter(x=>x['Block Code']===b['Block Code']&&biHasRooms(x)).reduce((s,x)=>s+biCalcRev(x),0);
+      return rb-ra;
+    }
     if(sortF==='rooms') return (n(b['Rooms Picked Up'])||0)-(n(a['Rooms Picked Up'])||0);
     if(sortF==='adr') return (n(b['Avg Rate'])||0)-(n(a['Avg Rate'])||0);
     if(sortF==='arrival') return (a['Arrival']||'').localeCompare(b['Arrival']||'');
@@ -972,10 +979,11 @@ function renderGrByBlock(){
 
   if(!rows.length){document.getElementById('gr-block-tbl').innerHTML='<div class="empty">No blocks match filters.</div>';return;}
 
-  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Block</th><th>Arrival</th><th>Status</th><th>Market</th><th>Rooms picked up</th><th>Block size</th><th>Pickup %</th><th>Avg Rate</th><th>Actual Revenue</th></tr></thead><tbody>';
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Block</th><th>Arrival</th><th>Status</th><th>Market</th><th>Rooms picked up</th><th>Block size</th><th>Pickup %</th><th>Avg Rate</th><th>Calc. Revenue</th></tr></thead><tbody>';
   rows.forEach(r=>{
     const eff=effectiveStatus(r);
-    const p=n(r['Pickup %']); const avgRate=n(r['Avg Rate']); const actRev=n(r['Actual Revenue']);
+    const p=n(r['Pickup %']); const avgRate=n(r['Avg Rate']);
+    const actRev=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
     const fc=p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
     const sb=eff==='COMPLETED'?'<span class="badge b-purple">Completed</span>':
               eff==='LOS'?'<span class="badge b-gray">Lost/CAN</span>':
@@ -1007,9 +1015,9 @@ function renderGrByMonth(){
   let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Month</th><th>Group nights</th><th>Group revenue</th><th>Avg ADR</th><th>Active blocks</th><th>DEF rooms</th><th>TEN rooms</th></tr></thead><tbody>';
   let hasData=false;
   MONTHS.forEach(mo=>{
-    const biRows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    const biRows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
     const nights=biRows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-    const rev=biRows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    const rev=biRows.reduce((s,r)=>s+biCalcRev(r),0);
     const adr=nights>0?rev/nights:null;
     // Pipeline blocks arriving this month
     const pipeRows=allPi.filter(r=>(r['Arrival']||'').startsWith(mo));
@@ -1042,7 +1050,8 @@ function renderGrByMarket(){
     if(!markets[m])markets[m]={rooms:0,rev:0,blocks:0,def:0,ten:0};
     markets[m].blocks++;
     markets[m].rooms+=(n(r['Rooms Picked Up'])||0);
-    markets[m].rev+=(n(r['Actual Revenue'])||0);
+    // revenue = sum of biCalcRev for this block's nights
+    markets[m].rev+=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
     if(r['Status']==='DEF')markets[m].def++;
     if(r['Status']==='TEN')markets[m].ten++;
   });
@@ -1090,29 +1099,33 @@ function renderGrNightly(){
   const rows=allBi.filter(r=>r['Block Code']===code).sort((a,b)=>(a['Stay Date']||'').localeCompare(b['Stay Date']||''));
   if(!rows.length){el.innerHTML='<div class="empty">No nightly data found for this block in Block Info Raw.</div>';return;}
   const pipe=allPi.find(p=>p['Block Code']===code);
-  const totalNights=rows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-  const totalRev=rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  // Only rows with rooms > 0 for revenue/ADR; show all rows in table but note 0-room ones
+  const activeRows=rows.filter(r=>biHasRooms(r));
+  const totalNights=activeRows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const totalRev=activeRows.reduce((s,r)=>s+biCalcRev(r),0);
   const avgAdr=totalNights>0?totalRev/totalNights:null;
 
   let html='';
-  // Summary strip
   if(pipe){
     html+=`<div style="padding:.75rem 1.25rem;border-bottom:.5px solid var(--border);display:flex;gap:2rem;flex-wrap:wrap;font-size:12px">
       <div><span style="color:var(--text2)">Block: </span><b>${pipe['Block Name']}</b></div>
       <div><span style="color:var(--text2)">Status: </span><b>${pipe['Status']}</b></div>
-      <div><span style="color:var(--text2)">Total nights: </span><b>${totalNights.toLocaleString()}</b></div>
+      <div><span style="color:var(--text2)">Nights w/ rooms: </span><b>${totalNights.toLocaleString()}</b></div>
       <div><span style="color:var(--text2)">Total revenue: </span><b style="color:var(--green)">${fmt(totalRev)}</b></div>
       <div><span style="color:var(--text2)">Avg ADR: </span><b>${avgAdr!=null?fmt(avgAdr):'—'}</b></div>
+      <div style="color:var(--text3);font-size:11px">Revenue = rooms × rate. Rows with 0 rooms shown but excluded from totals.</div>
     </div>`;
   }
-  html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms Picked Up</th><th>Night Revenue</th><th>Avg Rate</th></tr></thead><tbody>';
+  html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms Picked Up</th><th>Avg Rate</th><th>Calc. Revenue</th></tr></thead><tbody>';
   rows.forEach(r=>{
-    const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
-    html+=`<tr>
+    const rate=n(r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
+    const calcRev=biCalcRev(r);
+    const zeroRow=!biHasRooms(r);
+    html+=`<tr style="${zeroRow?'opacity:0.45':''}">
       <td style="padding:9px 14px;font-weight:500">${r['Stay Date']||'—'}</td>
       <td style="font-weight:600">${rooms!=null?rooms:'—'}</td>
-      <td style="font-weight:700;color:${rev>0?'var(--green)':'var(--text)'}">${rev!=null?fmt(rev):'—'}</td>
       <td>${rate!=null?fmt(rate):'—'}</td>
+      <td style="font-weight:700;color:${calcRev>0?'var(--green)':'var(--text3)'}">${calcRev>0?fmt(calcRev):(zeroRow?'—':fmt(calcRev))}</td>
     </tr>`;
   });
   html+='</tbody></table></div>';
@@ -1345,24 +1358,26 @@ function renderGroupsCal(){
   allBi.forEach(r=>{
     const date=r['Stay Date']; if(!date)return;
     const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
-    // Skip fully lost/cancelled blocks
     if(pipe&&effectiveStatus(pipe)==='LOS') return;
     if(!byDate[date])byDate[date]=[];
     byDate[date].push({
       blockCode:r['Block Code'],
       blockName:pipe?pipe['Block Name']:r['Block Name']||r['Block Code'],
       rooms:n(r['Rooms Picked Up'])||0,
-      revenue:n(r['Night Revenue'])||0,
+      revenue:biCalcRev(r),
       rate:n(r['Avg Rate']),
       status:pipe?pipe['Status']:'',
       atRisk:pipe?pipe['At Risk?']==='YES':false,
       pickupPct:pipe?n(pipe['Pickup %']):null,
+      hasRooms:biHasRooms(r),
     });
   });
 
   const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
     const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
+    // Only count blocks with actual rooms for cell display
     const dayBlocks=byDate[dateStr]||[];
+    const activeBlocks=dayBlocks.filter(b=>b.hasRooms);
     if(!dayBlocks.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')"><div class="cal-day-num">${dayNumHtml}</div></div>`;
     const totalRooms=dayBlocks.reduce((s,b)=>s+b.rooms,0);
     const totalRev=dayBlocks.reduce((s,b)=>s+b.revenue,0);
@@ -1397,7 +1412,7 @@ function openGroupDayBI(dateStr){
   }
   let body='';
   const totalRooms=dayBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-  const totalRev=dayBlocks.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  const totalRev=dayBlocks.reduce((s,r)=>s+biCalcRev(r),0);
   body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
     <div><div style="font-size:11px;color:var(--text2)">Total rooms this night</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
     <div><div style="font-size:11px;color:var(--text2)">Night revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
@@ -1406,14 +1421,14 @@ function openGroupDayBI(dateStr){
   dayBlocks.forEach(r=>{
     const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
     const p=pipe?n(pipe['Pickup %']):null;
-    const rooms=n(r['Rooms Picked Up']); const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']);
+    const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); const calcRev=biCalcRev(r);
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
     body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
       <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:r['Block Code']}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
       <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${r['Block Code']||'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${rooms!=null?rooms:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Night revenue</span><span class="modal-kv-val" style="font-weight:700;color:var(--green)">${fmt(rev)}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:${calcRev>0?'var(--green)':'var(--text2)'}">${calcRev>0?fmt(calcRev):(rooms===0?'0 rooms':'—')}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Rate</span><span class="modal-kv-val">${fmt(rate)}</span></div>
       ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
       ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}</span></div>`:''}
@@ -1510,15 +1525,15 @@ function openRevDay(dateStr){
   // Group blocks on property tonight (Block Info Raw)
   if(biBlocks.length){
     const biTotRooms=biBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-    const biTotRev=biBlocks.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    const biTotRev=biBlocks.reduce((s,r)=>s+biCalcRev(r),0);
     body+=`<div class="modal-section"><div class="modal-section-title">Group blocks on property tonight (${biBlocks.length})</div>`;
-    body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} revenue</div>`;
+    body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} calc. revenue</div>`;
     biBlocks.forEach(r=>{
       const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
-      const rooms=n(r['Rooms Picked Up']); const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']);
+      const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); const calcRev=biCalcRev(r);
       body+=`<div style="padding:6px 0;border-bottom:.5px solid var(--border)">
         <div style="font-weight:600;font-size:12px">${pipe?pipe['Block Name']:r['Block Code']}</div>
-        <div style="font-size:11px;color:var(--text2)">${rooms!=null?rooms:'—'} rooms · ${fmt(rev)} · ${fmt(rate)} rate${pipe?' · '+pipe['Status']:''}</div>
+        <div style="font-size:11px;color:var(--text2)">${rooms!=null?rooms:'—'} rooms · ${calcRev>0?fmt(calcRev):'—'} · ${fmt(rate)} rate${pipe?' · '+pipe['Status']:''}</div>
       </div>`;
     });
     body+='</div>';
