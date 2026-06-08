@@ -16,14 +16,15 @@
   --red:#A32D2D;--red-bg:#FCEBEB;
   --amber:#854F0B;--amber-bg:#FAEEDA;
   --blue:#185FA5;--blue-bg:#E6F1FB;
+  --purple:#5B3FA5;--purple-bg:#EDE8FB;
   --chart-blue:#378ADD;--chart-green:#639922;--chart-red:#E24B4A;
-  --chart-amber:#EF9F27;--chart-teal:#1D9E75;--chart-gray:#888780;
+  --chart-amber:#EF9F27;--chart-teal:#1D9E75;--chart-gray:#888780;--chart-purple:#8B5CF6;
 }
 @media(prefers-color-scheme:dark){
   :root{--bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;--text:#f0f0ed;--text2:#a0a09c;--text3:#6b6b67;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);}
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg3);color:var(--text);font-size:13px;min-height:100vh}
-.shell{max-width:1280px;margin:0 auto;padding:0 1.5rem 3rem}
+.shell{max-width:1320px;margin:0 auto;padding:0 1.5rem 3rem}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0 1rem;border-bottom:.5px solid var(--border);margin-bottom:0}
 .prop-name{font-size:18px;font-weight:600;letter-spacing:-.3px}
 .prop-sub{font-size:11px;color:var(--text2);margin-top:3px}
@@ -46,7 +47,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
 .card-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
-@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:900px){.two-col,.three-col{grid-template-columns:1fr}}
 .tbl{width:100%;border-collapse:collapse;font-size:12px}
 .tbl th{text-align:left;font-size:11px;font-weight:600;color:var(--text2);padding:6px 8px;border-bottom:.5px solid var(--border);white-space:nowrap}
 .tbl td{padding:9px 8px;border-bottom:.5px solid var(--border);vertical-align:middle}
@@ -55,7 +57,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-red{background:var(--red-bg);color:var(--red)}.b-amber{background:var(--amber-bg);color:var(--amber)}
 .b-green{background:var(--green-bg);color:var(--green)}.b-blue{background:var(--blue-bg);color:var(--blue)}
-.b-gray{background:var(--bg2);color:var(--text2)}
+.b-purple{background:var(--purple-bg);color:var(--purple)}.b-gray{background:var(--bg2);color:var(--text2)}
 .bar-wrap{display:flex;align-items:center;gap:6px}
 .bar-bg{height:5px;border-radius:3px;background:var(--border);flex:1;overflow:hidden;min-width:50px}
 .bar-fill{height:100%;border-radius:3px}
@@ -73,6 +75,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .ftab:hover{background:var(--bg2)}.ftab.active{background:var(--text);color:var(--bg);border-color:transparent}
 .chart-wrap{position:relative;width:100%;height:200px}
 .chart-wrap-lg{position:relative;width:100%;height:260px}
+.chart-wrap-xl{position:relative;width:100%;height:320px}
 .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:var(--text2)}
 .legend span{display:flex;align-items:center;gap:4px}
 .legend-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
@@ -90,7 +93,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .loading{text-align:center;padding:2rem;color:var(--text2);font-size:13px}
 .err-banner{padding:10px 14px;background:var(--red-bg);border-radius:var(--radius);font-size:12px;color:var(--red);margin-bottom:1rem;display:none}
 
-/* ── CALENDAR ── */
+/* section divider for tables */
+.tbl-section-header td{background:var(--bg3)!important;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:8px 8px 6px;border-bottom:.5px solid var(--border2)!important}
+
 /* ── CALENDAR ── */
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
 .cal-nav{display:flex;align-items:center;gap:10px}
@@ -102,42 +107,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .cal-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:8px 0;text-transform:uppercase;letter-spacing:.04em}
-/* Base cell — clean white card, NO gradient */
-.cal-cell{
-  min-height:96px;border-radius:var(--radius);
-  background:var(--bg);
-  border:.5px solid var(--border);
-  border-left:3px solid transparent;
-  padding:8px 9px 6px;
-  cursor:pointer;transition:box-shadow .15s,border-color .15s;
-  position:relative;display:flex;flex-direction:column;gap:3px;
-}
+.cal-cell{min-height:96px;border-radius:var(--radius);background:var(--bg);border:.5px solid var(--border);border-left:3px solid transparent;padding:8px 9px 6px;cursor:pointer;transition:box-shadow .15s,border-color .15s;position:relative;display:flex;flex-direction:column;gap:3px}
 .cal-cell:hover{box-shadow:0 3px 12px rgba(0,0,0,.1);border-color:var(--border2)}
 .cal-cell.empty{background:transparent;border-color:transparent!important;cursor:default;box-shadow:none}
-/* Status via left border accent only */
-.cal-cell.green-cell {border-left-color:#639922}
+.cal-cell.green-cell{border-left-color:#639922}
 .cal-cell.yellow-cell{border-left-color:#EF9F27}
-.cal-cell.red-cell   {border-left-color:#E24B4A}
-.cal-cell.gray-cell  {border-left-color:transparent}
-/* Today highlight: blue ring */
+.cal-cell.red-cell{border-left-color:#E24B4A}
+.cal-cell.gray-cell{border-left-color:transparent}
 .cal-cell.today-cell{box-shadow:0 0 0 2px var(--chart-blue)!important;border-left-width:3px}
-/* Day number */
-.cal-day-num{
-  font-size:13px;font-weight:700;color:var(--text);
-  line-height:1;margin-bottom:2px;
-}
-.cal-cell.today-cell .cal-day-num{
-  background:var(--chart-blue);color:#fff;
-  width:22px;height:22px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;
-}
-/* Event icons row */
+.cal-day-num{font-size:13px;font-weight:700;color:var(--text);line-height:1;margin-bottom:2px}
+.cal-cell.today-cell .cal-day-num{background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .cal-icon-row{display:flex;gap:4px;flex-wrap:wrap;font-size:14px;line-height:1.2}
-/* Mini info text */
 .cal-info{font-size:10px;color:var(--text2);font-weight:500;line-height:1.3}
 .cal-info.bold{font-weight:700;color:var(--text);font-size:11px}
-/* Progress bar at bottom */
 .cal-bar-wrap{margin-top:auto;padding-top:4px}
 .cal-bar{height:3px;border-radius:2px;background:var(--border)}
 .cal-bar-fill{height:100%;border-radius:2px;transition:width .3s}
@@ -146,7 +128,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
-.modal-box{background:var(--bg);border-radius:var(--radius-lg);padding:1.5rem;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-box{background:var(--bg);border-radius:var(--radius-lg);padding:1.5rem;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
 .modal-title{font-size:16px;font-weight:600}
 .modal-close{border:none;background:none;cursor:pointer;font-size:18px;color:var(--text2);padding:0 4px}
@@ -157,6 +139,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .modal-kv-label{color:var(--text2)}
 .modal-kv-val{font-weight:500}
 .modal-tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+
+/* ── GROUPS REVENUE specific ── */
+.grp-rev-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:1.25rem}
+.grp-kpi-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;border-left:3px solid var(--chart-blue)}
+.grp-kpi-card.green{border-left-color:var(--chart-green)}
+.grp-kpi-card.amber{border-left-color:var(--chart-amber)}
+.grp-kpi-card.red{border-left-color:var(--chart-red)}
+.grp-kpi-card.purple{border-left-color:var(--chart-purple)}
+.grp-kpi-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.grp-kpi-val{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.grp-kpi-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.grv-tab-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.segment-bar{display:flex;height:20px;border-radius:4px;overflow:hidden;margin:6px 0}
+.segment-bar-fill{transition:width .4s;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -171,6 +167,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 <nav class="nav">
   <button class="nav-tab active"  onclick="showPage('overview',this)"><i class="ti ti-layout-dashboard"></i> Overview</button>
   <button class="nav-tab" onclick="showPage('pipeline',this)"><i class="ti ti-building"></i> Groups</button>
+  <button class="nav-tab" onclick="showPage('grp-rev',this)"><i class="ti ti-report-money"></i> Groups Revenue</button>
   <button class="nav-tab" onclick="showPage('revenue',this)"><i class="ti ti-chart-bar"></i> Revenue</button>
   <button class="nav-tab" onclick="showPage('channels',this)"><i class="ti ti-sitemap"></i> Channels</button>
   <button class="nav-tab" onclick="showPage('events-cal',this)"><i class="ti ti-calendar-event"></i> Events cal</button>
@@ -179,7 +176,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('actions',this)"><i class="ti ti-checklist"></i> Actions</button>
 </nav>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- OVERVIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-overview">
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">Rooms OTB today</div><div class="mc-val" id="k-rooms">—</div><div class="mc-sub" id="k-occ">Occ%: —</div></div>
@@ -196,7 +195,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="card"><div class="card-title">Top at-risk groups</div><div id="risk-preview"></div></div>
 </div>
 
-<!-- PIPELINE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PIPELINE / GROUPS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-pipeline">
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">Active groups</div><div class="mc-val" id="p-active">—</div></div>
@@ -204,6 +205,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="mc"><div class="mc-label">Rooms at risk</div><div class="mc-val" id="p-rooms-risk" style="color:var(--red)">—</div></div>
     <div class="mc"><div class="mc-label">Total rooms available</div><div class="mc-val" id="p-avail">—</div></div>
     <div class="mc"><div class="mc-label">Past cutoff</div><div class="mc-val" id="p-pastco">—</div></div>
+    <div class="mc"><div class="mc-label">Completed</div><div class="mc-val" id="p-completed">—</div></div>
     <div class="mc"><div class="mc-label">Lost / cancelled</div><div class="mc-val" id="p-lost">—</div></div>
   </div>
   <div class="tab-row">
@@ -211,12 +213,125 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <button class="ftab" onclick="filterPipe('upcoming',this)">Cutoff ≤21d</button>
     <button class="ftab" onclick="filterPipe('def',this)">All definite</button>
     <button class="ftab" onclick="filterPipe('ten',this)">Tentative</button>
-    <button class="ftab" onclick="filterPipe('lost',this)">Lost / cancelled</button>
+    <button class="ftab" onclick="filterPipe('completed',this)">Completed</button>
+    <button class="ftab" onclick="filterPipe('lost',this)">Lost / Cancelled</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div id="pipe-body" style="overflow-x:auto"><div class="loading">Loading...</div></div></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- GROUPS REVENUE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-grp-rev">
+  <!-- KPI strip -->
+  <div class="grp-rev-kpi" id="gr-kpis"></div>
+
+  <!-- Sub-nav -->
+  <div class="tab-row grv-tab-row">
+    <button class="ftab active" onclick="grRevTab('summary',this)"><i class="ti ti-chart-bar" style="font-size:11px"></i> Revenue Summary</button>
+    <button class="ftab" onclick="grRevTab('byblock',this)"><i class="ti ti-list" style="font-size:11px"></i> By Block</button>
+    <button class="ftab" onclick="grRevTab('bymonth',this)"><i class="ti ti-calendar" style="font-size:11px"></i> Monthly View</button>
+    <button class="ftab" onclick="grRevTab('bymarket',this)"><i class="ti ti-tag" style="font-size:11px"></i> By Market Type</button>
+    <button class="ftab" onclick="grRevTab('nightly',this)"><i class="ti ti-table" style="font-size:11px"></i> Nightly Detail</button>
+  </div>
+
+  <!-- Summary panel -->
+  <div id="grrev-summary">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Group revenue by month</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Actual Revenue</span>
+          <span><span class="legend-sq" style="background:var(--chart-green)"></span>Forecast (OTB × Rate)</span>
+        </div>
+        <div class="chart-wrap-lg"><canvas id="grRevMonthChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Revenue by market type</div>
+        <div class="chart-wrap-lg"><canvas id="grRevMarketChart"></canvas></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Group ADR trend</div>
+        <div class="chart-wrap"><canvas id="grAdrChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Room nights by status</div>
+        <div class="chart-wrap"><canvas id="grStatusChart"></canvas></div>
+      </div>
+    </div>
+    <!-- channel revenue from group segments -->
+    <div class="card">
+      <div class="card-title">Group segment mix (room nights)</div>
+      <div id="gr-segment-bars"></div>
+    </div>
+  </div>
+
+  <!-- By block panel -->
+  <div id="grrev-byblock" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input id="gr-search" type="text" placeholder="Search block name or code…" oninput="renderGrByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;flex:1;min-width:160px">
+          <select id="gr-status-filter" onchange="renderGrByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="all">All statuses</option>
+            <option value="DEF">Definite</option>
+            <option value="TEN">Tentative</option>
+            <option value="ACT">Completed (ACT)</option>
+            <option value="CAN">Cancelled</option>
+            <option value="LOS">Lost</option>
+          </select>
+          <select id="gr-market-filter" onchange="renderGrByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="all">All markets</option>
+            <option value="GRS">GRS</option>
+            <option value="GRO">GRO</option>
+            <option value="GRM">GRM</option>
+          </select>
+          <select id="gr-sort" onchange="renderGrByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="rev">Sort: Revenue ↓</option>
+            <option value="rooms">Sort: Rooms ↓</option>
+            <option value="adr">Sort: ADR ↓</option>
+            <option value="arrival">Sort: Arrival date</option>
+            <option value="pickup">Sort: Pickup % ↓</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><div id="gr-block-tbl"></div></div>
+    </div>
+  </div>
+
+  <!-- By month panel -->
+  <div id="grrev-bymonth" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden"><div id="gr-month-tbl" style="overflow-x:auto"></div></div>
+  </div>
+
+  <!-- By market panel -->
+  <div id="grrev-bymarket" style="display:none">
+    <div class="two-col">
+      <div class="card"><div class="card-title">Market type breakdown</div><div id="gr-market-detail"></div></div>
+      <div class="card"><div class="card-title">Segment type breakdown</div><div id="gr-segment-detail"></div></div>
+    </div>
+  </div>
+
+  <!-- Nightly detail panel -->
+  <div id="grrev-nightly" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <select id="gr-nightly-block" onchange="renderGrNightly()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;flex:1">
+            <option value="">Select a block to view nightly detail…</option>
+          </select>
+        </div>
+      </div>
+      <div id="gr-nightly-tbl" style="overflow-x:auto"><div class="empty">Select a group block above to view night-by-night detail.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- REVENUE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-revenue">
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">MTD revenue</div><div class="mc-val" id="r-mtd">—</div><div class="mc-delta" id="r-mtdvar">—</div></div>
@@ -240,7 +355,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- CHANNELS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-channels">
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">OTA rooms YTD</div><div class="mc-val" id="c-ota-rooms">—</div><div class="mc-delta" id="c-ota-pct">—</div></div>
@@ -259,7 +376,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="card"><div class="card-title">Channel detail</div><div id="chan-detail"></div></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- EVENTS CALENDAR -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-events-cal">
   <div class="cal-header">
     <div class="cal-nav">
@@ -277,7 +396,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="events-cal-grid"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- GROUPS CALENDAR -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-groups-cal">
   <div class="cal-header">
     <div class="cal-nav">
@@ -292,10 +413,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       <span><span class="cal-legend-dot" style="background:var(--bg2);border:.5px solid var(--border)"></span>No groups</span>
     </div>
   </div>
+  <!-- NOTE: Calendar cells use Block Info Raw (one row per block per night / Stay Date) 
+       joined to Group Pipeline on Block Code for status/at-risk flags.
+       Group Pipeline Arrival column is NOT used for calendar placement. -->
   <div id="groups-cal-grid"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- REV MANAGER CALENDAR -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-rev-cal">
   <div class="cal-header">
     <div class="cal-nav">
@@ -312,7 +438,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="rev-cal-grid"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- ACTIONS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-actions">
   <div id="action-list" class="insight-row"><div class="loading">Building action list...</div></div>
 </div>
@@ -331,23 +459,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────────────
+// ── CONFIG ───────────────────────────────────────────────────────────────────
 const API  = 'AIzaSyDfB6MmmSm-Njym1M7NS-Pa_c6q3P9gxn8';
 const HUB  = '1fEN6Rliinp7_Llwpjs0wwoGIBGyzhFGjA76FF_oQHQ0';
-const EVENTS_SS = '1SjILMjXKnhNfZ2MzQYb2GTBchKb70Y6Tif7zDJN2w-k';
 const ROOMS_TOTAL = 140;
 
 // ── DATE HELPERS ─────────────────────────────────────────────────────────────
-// Always computed fresh so today always = actual today
 function getToday(){ return new Date().toISOString().slice(0,10); }
 function getThisMonth(){ return getToday().slice(0,7); }
 
 const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
-const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[];
 
-// Calendar state per calendar type
+const charts={};
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[];
+
+// Calendar state
 const calState = { events:{year:2026,month:6}, groups:{year:2026,month:6}, rev:{year:2026,month:6} };
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
@@ -359,6 +486,7 @@ function showPage(id,btn){
   if(id==='events-cal') renderEventsCal();
   if(id==='groups-cal') renderGroupsCal();
   if(id==='rev-cal')    renderRevCal();
+  if(id==='grp-rev')    renderGroupsRevenue();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -375,18 +503,23 @@ function toRows(vals){
 }
 function n(v){ if(v==null||v==='')return null; const s=String(v).replace(/[$,%]/g,'').replace(/,/g,'').trim(); const x=parseFloat(s); return isNaN(x)?null:x; }
 function fmt(v){ if(v==null)return'—'; return'$'+Math.round(v).toLocaleString('en-US'); }
+function fmtK(v){ if(v==null)return'—'; if(Math.abs(v)>=1000000) return'$'+(v/1000000).toFixed(1)+'M'; if(Math.abs(v)>=1000) return'$'+(v/1000).toFixed(1)+'k'; return'$'+Math.round(v).toLocaleString(); }
 function fixOcc(v){ if(v==null)return null; return v<2?v*100:v; }
 function normMonth(raw){ if(!raw)return null; const m=raw.trim().match(/^(\d{4})-(\d{1,2})$/); if(m)return m[1]+'-'+m[2].padStart(2,'0'); return null; }
 function moLabel(key){ return key?(MN[key.slice(5)]||key):'—'; }
 
-// ── EFFECTIVE STATUS: past arrival + past cutoff = treat as lost ──────────────
+// ── EFFECTIVE STATUS ─────────────────────────────────────────────────────────
+// Returns: 'COMPLETED' | 'LOS' (lost/cancelled) | original status (DEF/TEN)
 function effectiveStatus(r){
   const today=getToday();
+  // Explicitly cancelled/lost
   if(r['Status']==='CAN'||r['Status']==='LOS') return 'LOS';
   const arrival=r['Arrival']||'';
   const dtc=n(r['Days to Cutoff']);
-  // If arrival date has passed AND cutoff has passed → treat as lost/completed
-  if(arrival && arrival < today && dtc!=null && dtc<0) return 'LOS';
+  // ACT = completed stay
+  if(r['Status']==='ACT') return 'COMPLETED';
+  // Arrival in the past AND cutoff in the past → treat as completed (not lost)
+  if(arrival && arrival < today && dtc!=null && dtc<0) return 'COMPLETED';
   return r['Status'];
 }
 
@@ -395,16 +528,16 @@ async function loadAll(){
   document.getElementById('ts').textContent='Refreshing...';
   document.getElementById('err').style.display='none';
   try{
-    const [fcV,rvV,chV,piV,moV,evV]=await Promise.all([
+    const [fcV,rvV,chV,piV,moV,evV,biV]=await Promise.all([
       fetchTab(HUB,'Daily Forecast'), fetchTab(HUB,'Daily Revenue'),
       fetchTab(HUB,'Channel Summary'), fetchTab(HUB,'Group Pipeline'),
       fetchTab(HUB,'Monthly Summary'), fetchTab(HUB,'Events'),
+      fetchTab(HUB,'Block Info Raw'),
     ]);
     allFc=toRows(fcV); allRv=toRows(rvV); allCh=toRows(chV);
     allPi=toRows(piV); allMo=toRows(moV).map(r=>({...r,_mo:normMonth(r['Month'])})).filter(r=>r._mo);
-    allEv=toRows(evV);
+    allEv=toRows(evV); allBi=toRows(biV);
 
-    // Set calendars to current month
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
     calState.events.month=calState.groups.month=calState.rev.month=now.getMonth()+1;
@@ -412,6 +545,7 @@ async function loadAll(){
     renderKPIs(); renderOverviewRAG(); renderOccChart(); renderRiskPreview();
     renderPipeMetrics(); filterPipe('risk',document.querySelector('#page-pipeline .ftab.active'));
     renderRevenue(); renderChannels(); renderActions();
+    populateNightlySelect();
     document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString();
   }catch(e){
     const b=document.getElementById('err'); b.style.display='block';
@@ -429,12 +563,8 @@ function renderKPIs(){
   const occ=fc?fixOcc(n(fc['Occ%'])):null;
   const adr=fc?n(fc['ADR Actual']):null;
   const bar=fc?n(fc['BAR']):null;
-  const revRow=fc?n(fc['Room Revenue']):null;
-  const calcRev=(rooms!=null&&adr!=null&&!revRow)?rooms*adr:revRow;
-
-  // Today vs target: pull from Daily Revenue row for today
   const revTgt=rv?n(rv['Rev Target']):null;
-  const todayRev=rv?n(rv['Room Revenue']):calcRev;
+  const todayRev=rv?n(rv['Room Revenue']):null;
   const revVar=(todayRev!=null&&revTgt!=null)?todayRev-revTgt:null;
 
   document.getElementById('k-rooms').textContent=rooms!=null?rooms:'—';
@@ -448,11 +578,9 @@ function renderKPIs(){
     rvEl.style.color=revVar>=0?'var(--green)':'var(--red)';
     rvSub.textContent='vs '+fmt(revTgt)+' target today';
   } else if(todayRev!=null){
-    rvEl.textContent=fmt(todayRev);
-    rvEl.style.color='var(--text)';
+    rvEl.textContent=fmt(todayRev); rvEl.style.color='var(--text)';
     rvSub.textContent='no target set for today';
   }
-
   const mtdRv=allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
   const mtdRev=mtdRv.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
   const mtdTgt=mtdRv.reduce((s,r)=>s+(n(r['Rev Target'])||0),0);
@@ -461,7 +589,7 @@ function renderKPIs(){
   const mvEl=document.getElementById('k-mtdvar');
   if(mtdRev>0){mvEl.textContent=(mtdVar>=0?'+':'')+fmt(mtdVar)+' vs target';mvEl.className='mc-delta '+(mtdVar>=0?'up':'down');}
 
-  const atRisk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS').length;
+  const atRisk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED').length;
   document.getElementById('k-atrisk').textContent=atRisk;
 
   const chanYTD=allCh.filter(r=>r['Date']&&r['Date']<=today&&r['Date']>='2026-01-01');
@@ -527,7 +655,7 @@ function renderOccChart(){
 
 // ── RISK PREVIEW ─────────────────────────────────────────────────────────────
 function renderRiskPreview(){
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS')
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED')
     .sort((a,b)=>(n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999)).slice(0,5);
   const el=document.getElementById('risk-preview');
   if(!risk.length){el.innerHTML='<div class="empty">No at-risk groups right now.</div>';return;}
@@ -547,51 +675,448 @@ function renderRiskPreview(){
 
 // ── PIPELINE ─────────────────────────────────────────────────────────────────
 function renderPipeMetrics(){
-  const active=allPi.filter(r=>effectiveStatus(r)!=='LOS');
+  const active=allPi.filter(r=>effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
   const lost=allPi.filter(r=>effectiveStatus(r)==='LOS');
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS');
+  const completed=allPi.filter(r=>effectiveStatus(r)==='COMPLETED');
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
   const pastCo=active.filter(r=>(n(r['Days to Cutoff'])||1)<0);
   document.getElementById('p-active').textContent=active.length;
   document.getElementById('p-atrisk').textContent=risk.length;
   document.getElementById('p-rooms-risk').textContent=risk.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
   document.getElementById('p-avail').textContent=active.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
   document.getElementById('p-pastco').textContent=pastCo.length;
+  document.getElementById('p-completed').textContent=completed.length;
   document.getElementById('p-lost').textContent=lost.length;
 }
+
 function filterPipe(mode,btn){
   document.querySelectorAll('#page-pipeline .ftab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
+
   let rows=allPi;
-  if(mode==='risk') rows=rows.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS');
-  else if(mode==='upcoming') rows=rows.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=21&&effectiveStatus(r)!=='LOS';});
-  else if(mode==='def') rows=rows.filter(r=>r['Status']==='DEF'&&effectiveStatus(r)!=='LOS');
-  else if(mode==='ten') rows=rows.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS');
+  if(mode==='risk')      rows=rows.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  else if(mode==='upcoming') rows=rows.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=21&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED';});
+  else if(mode==='def')  rows=rows.filter(r=>r['Status']==='DEF'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  else if(mode==='ten')  rows=rows.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  else if(mode==='completed') rows=rows.filter(r=>effectiveStatus(r)==='COMPLETED');
   else if(mode==='lost') rows=rows.filter(r=>effectiveStatus(r)==='LOS');
+
   rows=rows.slice().sort((a,b)=>{
+    if(mode==='completed'||mode==='lost') return(a['Arrival']||'').localeCompare(b['Arrival']||'');
     const ar=a['At Risk?']==='YES'?0:1,br=b['At Risk?']==='YES'?0:1;
     if(ar!==br)return ar-br;
     return(n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999);
   });
+
   const body=document.getElementById('pipe-body');
   if(!rows.length){body.innerHTML='<div class="empty">No groups match this filter.</div>';return;}
-  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Group</th><th>Arrival</th><th>Status</th><th>Pickup</th><th>Avail</th><th>Cutoff</th><th>Flag</th></tr></thead><tbody>';
+
+  const isHistorical=(mode==='completed'||mode==='lost');
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Group</th><th>Arrival</th><th>Status</th>';
+  if(!isHistorical) html+='<th>Pickup</th><th>Avail</th><th>Cutoff</th><th>Flag</th>';
+  else html+='<th>Rooms picked up</th><th>Avg Rate</th><th>Revenue</th><th>Market</th>';
+  html+='</tr></thead><tbody>';
+
   rows.forEach(r=>{
     const p=n(r['Pickup %']); const dtc=n(r['Days to Cutoff']);
     const eff=effectiveStatus(r);
-    const isR=r['At Risk?']==='YES'&&eff!=='LOS';
+    const isR=r['At Risk?']==='YES'&&eff!=='LOS'&&eff!=='COMPLETED';
     const fc=p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
-    const sb=eff==='LOS'?'<span class="badge b-gray">LOS</span>':r['Status']==='DEF'?'<span class="badge b-green">DEF</span>':r['Status']==='TEN'?'<span class="badge b-amber">TEN</span>':r['Status']==='CAN'?'<span class="badge b-red">CAN</span>':`<span class="badge b-blue">${r['Status']||'—'}</span>`;
-    const fb=isR?'<span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span>':eff==='LOS'?'<span class="badge b-gray">Completed/Lost</span>':dtc!=null&&dtc<=7?'<span class="badge b-amber">Cutoff soon</span>':'<span class="badge b-gray">OK</span>';
+    const sb=eff==='COMPLETED'?'<span class="badge b-purple">Completed</span>':
+              eff==='LOS'?'<span class="badge b-gray">Lost/CAN</span>':
+              r['Status']==='DEF'?'<span class="badge b-green">DEF</span>':
+              r['Status']==='TEN'?'<span class="badge b-amber">TEN</span>':
+              r['Status']==='CAN'?'<span class="badge b-red">CAN</span>':
+              `<span class="badge b-blue">${r['Status']||'—'}</span>`;
+    const fb=isR?'<span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span>':
+              dtc!=null&&dtc<=7?'<span class="badge b-amber">Cutoff soon</span>':
+              '<span class="badge b-gray">OK</span>';
+    const avgRate=n(r['Avg Rate']); const actRev=n(r['Actual Revenue']);
     html+=`<tr><td style="padding:10px 14px"><div style="font-weight:600">${r['Block Name']||'—'}</div><div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div></td>
-      <td>${r['Arrival']||'—'}</td><td>${sb}</td>
-      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
-      <span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span></div>
-      <div style="font-size:11px;color:var(--text2)">${r['Rooms Picked Up']||'0'}/${r['Current Block']||'0'}</div></td>
-      <td style="font-weight:600">${r['Rooms Available']||'—'}</td>
-      <td style="font-size:12px;color:${dtc!=null&&dtc<=7?'var(--red)':dtc!=null&&dtc<=14?'var(--amber)':'var(--text2)'}">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</td>
-      <td>${fb}</td></tr>`;
+      <td>${r['Arrival']||'—'}</td><td>${sb}</td>`;
+    if(!isHistorical){
+      html+=`<td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
+        <span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span></div>
+        <div style="font-size:11px;color:var(--text2)">${r['Rooms Picked Up']||'0'}/${r['Current Block']||'0'}</div></td>
+        <td style="font-weight:600">${r['Rooms Available']||'—'}</td>
+        <td style="font-size:12px;color:${dtc!=null&&dtc<=7?'var(--red)':dtc!=null&&dtc<=14?'var(--amber)':'var(--text2)'}">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</td>
+        <td>${fb}</td>`;
+    } else {
+      html+=`<td style="font-weight:600">${r['Rooms Picked Up']||'0'}</td>
+        <td>${avgRate!=null?fmt(avgRate):'—'}</td>
+        <td style="font-weight:600">${actRev!=null?fmt(actRev):'—'}</td>
+        <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>`;
+    }
+    html+='</tr>';
   });
   html+='</tbody></table>'; body.innerHTML=html;
+}
+
+// ── GROUPS REVENUE ────────────────────────────────────────────────────────────
+let grRevActiveTab='summary';
+
+function grRevTab(tab,btn){
+  grRevActiveTab=tab;
+  document.querySelectorAll('.grv-tab-row .ftab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('grrev-summary').style.display=tab==='summary'?'':'none';
+  document.getElementById('grrev-byblock').style.display=tab==='byblock'?'':'none';
+  document.getElementById('grrev-bymonth').style.display=tab==='bymonth'?'':'none';
+  document.getElementById('grrev-bymarket').style.display=tab==='bymarket'?'':'none';
+  document.getElementById('grrev-nightly').style.display=tab==='nightly'?'':'none';
+}
+
+function renderGroupsRevenue(){
+  renderGrKPIs();
+  renderGrSummaryCharts();
+  renderGrByBlock();
+  renderGrByMonth();
+  renderGrByMarket();
+  // nightly select populated on load
+}
+
+function renderGrKPIs(){
+  // Active groups (DEF + TEN)
+  const active=allPi.filter(r=>r['Status']==='DEF'||r['Status']==='TEN');
+  const completed=allPi.filter(r=>effectiveStatus(r)==='COMPLETED');
+  const lost=allPi.filter(r=>effectiveStatus(r)==='LOS');
+
+  // Total room nights from Block Info Raw (only definite/tentative/act)
+  const biActive=allBi.filter(r=>{
+    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+    if(!pipe)return true; // include if no pipeline match
+    const eff=effectiveStatus(pipe);
+    return eff!=='LOS';
+  });
+  const totalNights=biActive.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const totalRev=biActive.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  const avgRate=totalNights>0?totalRev/totalNights:null;
+
+  // OTB revenue estimate: pipeline rooms picked up × avg rate from Block Info
+  const otbRooms=active.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const otbRev=active.reduce((s,r)=>{
+    const ar=n(r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
+    return s+(ar&&rp?ar*rp:0);
+  },0);
+
+  // Rooms at risk
+  const riskRooms=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED')
+    .reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
+
+  document.getElementById('gr-kpis').innerHTML=`
+    <div class="grp-kpi-card green">
+      <div class="grp-kpi-label">Total group nights (actual)</div>
+      <div class="grp-kpi-val">${totalNights.toLocaleString()}</div>
+      <div class="grp-kpi-sub">room nights from Block Info</div>
+    </div>
+    <div class="grp-kpi-card">
+      <div class="grp-kpi-label">Total group revenue (actual)</div>
+      <div class="grp-kpi-val">${fmtK(totalRev)}</div>
+      <div class="grp-kpi-sub">from Block Info nightly data</div>
+    </div>
+    <div class="grp-kpi-card amber">
+      <div class="grp-kpi-label">Avg group rate (ADR)</div>
+      <div class="grp-kpi-val">${avgRate!=null?fmt(avgRate):'—'}</div>
+      <div class="grp-kpi-sub">across all group nights</div>
+    </div>
+    <div class="grp-kpi-card">
+      <div class="grp-kpi-label">OTB group revenue</div>
+      <div class="grp-kpi-val">${fmtK(otbRev)}</div>
+      <div class="grp-kpi-sub">${otbRooms.toLocaleString()} rooms × block avg rate</div>
+    </div>
+    <div class="grp-kpi-card red">
+      <div class="grp-kpi-label">Rooms at risk</div>
+      <div class="grp-kpi-val">${riskRooms.toLocaleString()}</div>
+      <div class="grp-kpi-sub">available in at-risk blocks</div>
+    </div>
+    <div class="grp-kpi-card purple">
+      <div class="grp-kpi-label">Completed groups</div>
+      <div class="grp-kpi-val">${completed.length}</div>
+      <div class="grp-kpi-sub">${lost.length} lost / cancelled</div>
+    </div>`;
+}
+
+function renderGrSummaryCharts(){
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+
+  // Revenue by month from Block Info Raw
+  const moActual=MONTHS.map(mo=>{
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    return rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  });
+  // OTB forecast by month (pipeline rooms picked up × avg rate, future months)
+  const moForecast=MONTHS.map(mo=>{
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    if(rows.length>0) return null; // have actual data, don't show forecast
+    // No Block Info for this month → estimate from pipeline
+    const pipe=allPi.filter(r=>{const arr=r['Arrival']||'';return arr.startsWith(mo);});
+    return pipe.reduce((s,r)=>{
+      const ar=n(r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
+      return s+(ar&&rp?ar*rp:0);
+    },0)||null;
+  });
+
+  if(charts.grRevMonth)charts.grRevMonth.destroy();
+  charts.grRevMonth=new Chart(document.getElementById('grRevMonthChart'),{
+    type:'bar',
+    data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'Actual Revenue',data:moActual.map(v=>v>0?Math.round(v):null),backgroundColor:'#378ADD',borderRadius:3,order:2},
+      {label:'Forecast (OTB)',data:moForecast,backgroundColor:'rgba(99,153,34,0.4)',borderRadius:3,order:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+              y:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  // Revenue by market type (from pipeline Actual Revenue)
+  const markets={GRS:0,GRO:0,GRM:0,Other:0};
+  allPi.forEach(r=>{
+    const m=r['Market Type']||'Other'; const v=n(r['Actual Revenue'])||0;
+    if(markets[m]!==undefined)markets[m]+=v; else markets['Other']+=v;
+  });
+  const mKeys=Object.keys(markets).filter(k=>markets[k]>0);
+  const mColors=['#378ADD','#639922','#EF9F27','#888780'];
+  if(charts.grRevMarket)charts.grRevMarket.destroy();
+  charts.grRevMarket=new Chart(document.getElementById('grRevMarketChart'),{
+    type:'doughnut',
+    data:{labels:mKeys,datasets:[{data:mKeys.map(k=>Math.round(markets[k])),backgroundColor:mColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)}}}}
+  });
+
+  // ADR by month (from Block Info)
+  const moADR=MONTHS.map(mo=>{
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    const nights=rows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    const rev=rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    return nights>0?rev/nights:null;
+  });
+  if(charts.grAdr)charts.grAdr.destroy();
+  charts.grAdr=new Chart(document.getElementById('grAdrChart'),{
+    type:'line',
+    data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[{label:'Group ADR',data:moADR.map(v=>v?Math.round(v):null),borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.08)',borderWidth:2,pointRadius:3,fill:true,tension:0.3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+              y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  // Room nights by status
+  const statuses={DEF:0,TEN:0,ACT:0,COMPLETED:0,CAN:0,LOS:0};
+  allPi.forEach(r=>{
+    const eff=effectiveStatus(r);
+    const rooms=n(r['Rooms Picked Up'])||0;
+    if(eff==='COMPLETED')statuses['COMPLETED']+=rooms;
+    else if(eff==='LOS'){statuses[r['Status']==='CAN'?'CAN':'LOS']+=rooms;}
+    else{if(statuses[r['Status']]!==undefined)statuses[r['Status']]+=rooms;}
+  });
+  const sKeys=['DEF','TEN','COMPLETED','CAN','LOS'];
+  const sColors={'DEF':'#639922','TEN':'#EF9F27','COMPLETED':'#378ADD','CAN':'#E24B4A','LOS':'#888780'};
+  if(charts.grStatus)charts.grStatus.destroy();
+  charts.grStatus=new Chart(document.getElementById('grStatusChart'),{
+    type:'bar',
+    data:{labels:sKeys,datasets:[{label:'Room Nights',data:sKeys.map(k=>statuses[k]),backgroundColor:sKeys.map(k=>sColors[k]),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+              y:{ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  // Segment bars (from Daily Forecast group sub-segments)
+  const segments={
+    'GRP Association':0,'GRP Corporate':0,'GRP Government':0,
+    'GRP SMERFEE':0,'GRP Teams':0,'GRP Tour & Travel':0
+  };
+  allFc.forEach(r=>{
+    Object.keys(segments).forEach(k=>{ segments[k]+=(n(r[k])||0); });
+  });
+  const segTotal=Object.values(segments).reduce((s,v)=>s+v,0)||1;
+  const segColors=['#378ADD','#639922','#888780','#EF9F27','#8B5CF6','#1D9E75'];
+  const segKeys=Object.keys(segments);
+  let segHtml='<div style="margin-bottom:.5rem;font-size:11px;color:var(--text2)">Proportional share of group room nights YTD</div>';
+  segHtml+='<div class="segment-bar">';
+  segKeys.forEach((k,i)=>{const pct=Math.round(segments[k]/segTotal*100);if(pct>0)segHtml+=`<div class="segment-bar-fill" style="width:${pct}%;background:${segColors[i]}" title="${k}: ${pct}%">${pct>5?pct+'%':''}</div>`;});
+  segHtml+='</div>';
+  segHtml+='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">';
+  segKeys.forEach((k,i)=>{
+    const pct=Math.round(segments[k]/segTotal*100);
+    const nights=Math.round(segments[k]);
+    segHtml+=`<div style="display:flex;align-items:center;gap:5px;font-size:11px"><span style="width:9px;height:9px;border-radius:2px;background:${segColors[i]};display:inline-block;flex-shrink:0"></span><span><b>${k.replace('GRP ','')}</b> — ${nights.toLocaleString()} nights (${pct}%)</span></div>`;
+  });
+  segHtml+='</div>';
+  document.getElementById('gr-segment-bars').innerHTML=segHtml;
+}
+
+function renderGrByBlock(){
+  const search=(document.getElementById('gr-search').value||'').toLowerCase();
+  const statusF=document.getElementById('gr-status-filter').value;
+  const marketF=document.getElementById('gr-market-filter').value;
+  const sortF=document.getElementById('gr-sort').value;
+
+  let rows=allPi.filter(r=>{
+    if(search&&!(r['Block Name']||'').toLowerCase().includes(search)&&!(r['Block Code']||'').toLowerCase().includes(search))return false;
+    if(statusF!=='all'){
+      const eff=effectiveStatus(r);
+      if(statusF==='ACT'&&eff!=='COMPLETED')return false;
+      if(statusF!=='ACT'&&r['Status']!==statusF)return false;
+    }
+    if(marketF!=='all'&&r['Market Type']!==marketF)return false;
+    return true;
+  });
+
+  rows=rows.slice().sort((a,b)=>{
+    if(sortF==='rev') return (n(b['Actual Revenue'])||0)-(n(a['Actual Revenue'])||0);
+    if(sortF==='rooms') return (n(b['Rooms Picked Up'])||0)-(n(a['Rooms Picked Up'])||0);
+    if(sortF==='adr') return (n(b['Avg Rate'])||0)-(n(a['Avg Rate'])||0);
+    if(sortF==='arrival') return (a['Arrival']||'').localeCompare(b['Arrival']||'');
+    if(sortF==='pickup') return (n(b['Pickup %'])||0)-(n(a['Pickup %'])||0);
+    return 0;
+  });
+
+  if(!rows.length){document.getElementById('gr-block-tbl').innerHTML='<div class="empty">No blocks match filters.</div>';return;}
+
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Block</th><th>Arrival</th><th>Status</th><th>Market</th><th>Rooms picked up</th><th>Block size</th><th>Pickup %</th><th>Avg Rate</th><th>Actual Revenue</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const eff=effectiveStatus(r);
+    const p=n(r['Pickup %']); const avgRate=n(r['Avg Rate']); const actRev=n(r['Actual Revenue']);
+    const fc=p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
+    const sb=eff==='COMPLETED'?'<span class="badge b-purple">Completed</span>':
+              eff==='LOS'?'<span class="badge b-gray">Lost/CAN</span>':
+              r['Status']==='DEF'?'<span class="badge b-green">DEF</span>':
+              r['Status']==='TEN'?'<span class="badge b-amber">TEN</span>':
+              `<span class="badge b-blue">${r['Status']||'—'}</span>`;
+    html+=`<tr><td style="padding:9px 14px"><div style="font-weight:600">${r['Block Name']||'—'}</div><div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div></td>
+      <td>${r['Arrival']||'—'}</td>
+      <td>${sb}</td>
+      <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>
+      <td style="font-weight:600">${r['Rooms Picked Up']||'0'}</td>
+      <td>${r['Current Block']||'—'}</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
+          <span style="font-size:12px;font-weight:600;min-width:30px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span>
+        </div>
+      </td>
+      <td>${avgRate!=null?fmt(avgRate):'—'}</td>
+      <td style="font-weight:700;color:${actRev>0?'var(--green)':'var(--text)'}">${actRev!=null?fmt(actRev):'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('gr-block-tbl').innerHTML=html;
+}
+
+function renderGrByMonth(){
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Month</th><th>Group nights</th><th>Group revenue</th><th>Avg ADR</th><th>Active blocks</th><th>DEF rooms</th><th>TEN rooms</th></tr></thead><tbody>';
+  let hasData=false;
+  MONTHS.forEach(mo=>{
+    const biRows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo));
+    const nights=biRows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    const rev=biRows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    const adr=nights>0?rev/nights:null;
+    // Pipeline blocks arriving this month
+    const pipeRows=allPi.filter(r=>(r['Arrival']||'').startsWith(mo));
+    const defRooms=pipeRows.filter(r=>r['Status']==='DEF').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    const tenRooms=pipeRows.filter(r=>r['Status']==='TEN').reduce((s,r)=>s+(n(r['Current Block'])||0),0);
+    const activeBlocks=pipeRows.filter(r=>effectiveStatus(r)!=='LOS').length;
+    if(nights===0&&rev===0&&activeBlocks===0)return;
+    hasData=true;
+    const thisMonth=getThisMonth();
+    const sfx=mo===thisMonth?' (current)':mo<thisMonth?' ✓':'';
+    html+=`<tr>
+      <td style="padding:9px 14px;font-weight:600">${moLabel(mo)}${sfx}</td>
+      <td style="font-weight:600">${nights>0?nights.toLocaleString():'—'}</td>
+      <td style="font-weight:700;color:${rev>0?'var(--green)':'var(--text)'}">${rev>0?fmt(rev):'—'}</td>
+      <td>${adr!=null?fmt(adr):'—'}</td>
+      <td>${activeBlocks>0?activeBlocks:'—'}</td>
+      <td>${defRooms>0?defRooms:'—'}</td>
+      <td>${tenRooms>0?tenRooms:'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('gr-month-tbl').innerHTML=hasData?html:'<div class="empty">No monthly group data available yet.</div>';
+}
+
+function renderGrByMarket(){
+  // Market type breakdown
+  const markets={};
+  allPi.forEach(r=>{
+    const m=r['Market Type']||'Unknown';
+    if(!markets[m])markets[m]={rooms:0,rev:0,blocks:0,def:0,ten:0};
+    markets[m].blocks++;
+    markets[m].rooms+=(n(r['Rooms Picked Up'])||0);
+    markets[m].rev+=(n(r['Actual Revenue'])||0);
+    if(r['Status']==='DEF')markets[m].def++;
+    if(r['Status']==='TEN')markets[m].ten++;
+  });
+  let mHtml='<table class="tbl"><thead><tr><th>Market</th><th>Blocks</th><th>Rooms</th><th>Revenue</th><th>DEF</th><th>TEN</th></tr></thead><tbody>';
+  Object.entries(markets).sort((a,b)=>b[1].rev-a[1].rev).forEach(([k,v])=>{
+    mHtml+=`<tr><td><span class="badge b-gray">${k}</span></td><td>${v.blocks}</td><td style="font-weight:600">${v.rooms.toLocaleString()}</td><td style="font-weight:700;color:var(--green)">${v.rev>0?fmt(v.rev):'—'}</td><td>${v.def}</td><td>${v.ten}</td></tr>`;
+  });
+  mHtml+='</tbody></table>';
+  document.getElementById('gr-market-detail').innerHTML=Object.keys(markets).length?mHtml:'<div class="empty">No market data available.</div>';
+
+  // Segment breakdown from Daily Forecast GRP columns
+  const segs=['GRP Association','GRP Corporate','GRP Government','GRP SMERFEE','GRP Teams','GRP Tour & Travel'];
+  let sHtml='<table class="tbl"><thead><tr><th>Segment</th><th>Room nights YTD</th><th>Share</th></tr></thead><tbody>';
+  const segColors=['#378ADD','#639922','#888780','#EF9F27','#8B5CF6','#1D9E75'];
+  const totSeg=segs.reduce((s,k)=>s+allFc.reduce((ss,r)=>ss+(n(r[k])||0),0),0)||1;
+  segs.forEach((k,i)=>{
+    const nights=Math.round(allFc.reduce((s,r)=>s+(n(r[k])||0),0));
+    const pct=Math.round(nights/totSeg*100);
+    sHtml+=`<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${segColors[i]};margin-right:6px;vertical-align:middle"></span>${k.replace('GRP ','')}</td>
+      <td style="font-weight:600">${nights.toLocaleString()}</td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${segColors[i]}"></div></div><span style="font-size:12px;font-weight:600;min-width:30px;text-align:right">${pct}%</span></div></td></tr>`;
+  });
+  sHtml+='</tbody></table>';
+  document.getElementById('gr-segment-detail').innerHTML=sHtml;
+}
+
+function populateNightlySelect(){
+  const sel=document.getElementById('gr-nightly-block');
+  // Unique blocks from Block Info Raw
+  const codes=[...new Set(allBi.map(r=>r['Block Code']).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Select a block to view nightly detail…</option>';
+  codes.forEach(code=>{
+    const pipe=allPi.find(p=>p['Block Code']===code);
+    const name=pipe?pipe['Block Name']:code;
+    const opt=document.createElement('option');
+    opt.value=code; opt.textContent=`${name} (${code})`;
+    sel.appendChild(opt);
+  });
+}
+
+function renderGrNightly(){
+  const code=document.getElementById('gr-nightly-block').value;
+  const el=document.getElementById('gr-nightly-tbl');
+  if(!code){el.innerHTML='<div class="empty">Select a group block above to view night-by-night detail.</div>';return;}
+  const rows=allBi.filter(r=>r['Block Code']===code).sort((a,b)=>(a['Stay Date']||'').localeCompare(b['Stay Date']||''));
+  if(!rows.length){el.innerHTML='<div class="empty">No nightly data found for this block in Block Info Raw.</div>';return;}
+  const pipe=allPi.find(p=>p['Block Code']===code);
+  const totalNights=rows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const totalRev=rows.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  const avgAdr=totalNights>0?totalRev/totalNights:null;
+
+  let html='';
+  // Summary strip
+  if(pipe){
+    html+=`<div style="padding:.75rem 1.25rem;border-bottom:.5px solid var(--border);display:flex;gap:2rem;flex-wrap:wrap;font-size:12px">
+      <div><span style="color:var(--text2)">Block: </span><b>${pipe['Block Name']}</b></div>
+      <div><span style="color:var(--text2)">Status: </span><b>${pipe['Status']}</b></div>
+      <div><span style="color:var(--text2)">Total nights: </span><b>${totalNights.toLocaleString()}</b></div>
+      <div><span style="color:var(--text2)">Total revenue: </span><b style="color:var(--green)">${fmt(totalRev)}</b></div>
+      <div><span style="color:var(--text2)">Avg ADR: </span><b>${avgAdr!=null?fmt(avgAdr):'—'}</b></div>
+    </div>`;
+  }
+  html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms Picked Up</th><th>Night Revenue</th><th>Avg Rate</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
+    html+=`<tr>
+      <td style="padding:9px 14px;font-weight:500">${r['Stay Date']||'—'}</td>
+      <td style="font-weight:600">${rooms!=null?rooms:'—'}</td>
+      <td style="font-weight:700;color:${rev>0?'var(--green)':'var(--text)'}">${rev!=null?fmt(rev):'—'}</td>
+      <td>${rate!=null?fmt(rate):'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
 }
 
 // ── REVENUE ──────────────────────────────────────────────────────────────────
@@ -693,7 +1218,7 @@ function renderChannels(){
   const channels=[{label:'OTA',rooms:ota,color:'#E24B4A'},{label:'Direct',rooms:dir,color:'#639922'},{label:'Group',rooms:grp,color:'#378ADD'},{label:'Corporate',rooms:corp,color:'#EF9F27'},{label:'Government',rooms:gov,color:'#888780'},{label:'Wholesale',rooms:whl,color:'#1D9E75'},{label:'Other',rooms:other,color:'#B4B2A9'}];
   if(charts.pie)charts.pie.destroy();
   charts.pie=new Chart(document.getElementById('chanPieChart'),{type:'doughnut',data:{labels:channels.map(c=>c.label),datasets:[{data:channels.map(c=>Math.round(c.rooms)),backgroundColor:channels.map(c=>c.color),borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toLocaleString()+' ('+Math.round(c.parsed/tot*100)+'%)'}}}}});
-  const trendMos=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'].filter(m=>m<=getThisMonth());
+  const trendMos=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'].filter(m=>m<=getThisMonth());
   if(charts.trend)charts.trend.destroy();
   charts.trend=new Chart(document.getElementById('chanTrendChart'),{type:'bar',data:{labels:trendMos.map(m=>MN[m.slice(5)]),datasets:[{label:'OTA',data:trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['OTA Rooms'])||0),0)),backgroundColor:'#E24B4A',borderRadius:2},{label:'Direct',data:trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['Direct Rooms'])||0),0)),backgroundColor:'#639922',borderRadius:2},{label:'Group',data:trendMos.map(mo=>allCh.filter(r=>r['Date']&&r['Date'].startsWith(mo)).reduce((s,r)=>s+(n(r['Group Rooms'])||0),0)),backgroundColor:'#378ADD',borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}});
   let det='<table class="tbl"><thead><tr><th>Channel</th><th>Rooms YTD</th><th>Share</th></tr></thead><tbody>';
@@ -715,10 +1240,9 @@ function openModal(title,bodyHtml){ document.getElementById('modal-title').textC
 
 function buildCalGrid(year,month,cellFn){
   const today=getToday();
-  const firstDay=new Date(year,month-1,1).getDay(); // 0=Sun
+  const firstDay=new Date(year,month-1,1).getDay();
   const daysInMonth=new Date(year,month,0).getDate();
   const monthKey=year+'-'+(String(month).padStart(2,'0'));
-
   let html='<div class="cal-grid">';
   ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>html+=`<div class="cal-dow">${d}</div>`);
   for(let i=0;i<firstDay;i++) html+=`<div class="cal-cell empty"></div>`;
@@ -727,7 +1251,6 @@ function buildCalGrid(year,month,cellFn){
     const isToday=dateStr===today;
     html+=cellFn(dateStr,d,isToday);
   }
-  // pad end
   const total=firstDay+daysInMonth;
   const rem=(7-total%7)%7;
   for(let i=0;i<rem;i++) html+=`<div class="cal-cell empty"></div>`;
@@ -743,25 +1266,22 @@ function renderEventsCal(){
     const ev=allEv.find(r=>r['Date']===dateStr);
     const fc=allFc.find(r=>r['Date']===dateStr);
     const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||ev['Laugh Patriots Place']||ev['More']);
-    if(!hasEvent) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')"><div class="cal-day-num">${isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px">${d}</span>`:d}</div></div>`;
-
+    const dayNumHtml=(isToday)?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
+    if(!hasEvent) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')"><div class="cal-day-num">${dayNumHtml}</div></div>`;
     const occ=fc?fixOcc(n(fc['Occ%'])):null;
     const rooms=fc?n(fc['Total Rooms']):null;
     let colorClass='gray-cell';
-    if(occ!=null){ if(occ>=70)colorClass='green-cell'; else if(occ>=50)colorClass='yellow-cell'; else colorClass='red-cell'; }
-
+    if(occ!=null){if(occ>=70)colorClass='green-cell';else if(occ>=50)colorClass='yellow-cell';else colorClass='red-cell';}
     const icons=[];
     if(ev['Gillette Stadium']) icons.push(`<span title="${ev['Gillette Stadium']}">🏟</span>`);
     if(ev['Xfinity Center'])  icons.push(`<span title="${ev['Xfinity Center']}">🎵</span>`);
     if(ev['Holiday'])         icons.push(`<span title="${ev['Holiday']}">🎉</span>`);
     if(ev['Laugh Patriots Place']) icons.push(`<span title="${ev['Laugh Patriots Place']}">😂</span>`);
     if(ev['More'])            icons.push(`<span title="${ev['More']}">➕</span>`);
-
     const pctClass=occ>=70?'green':occ>=50?'amber':'red';
     const fillColor=occ>=70?'#639922':occ>=50?'#EF9F27':'#E24B4A';
-    const dayNum=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')">
-      <div class="cal-day-num">${dayNum}</div>
+      <div class="cal-day-num">${dayNumHtml}</div>
       <div class="cal-icon-row">${icons.join('')}</div>
       ${rooms!=null?`<div class="cal-info">${rooms}/${ROOMS_TOTAL} rooms</div>`:''}
       <div class="cal-bar-wrap">
@@ -779,8 +1299,6 @@ function openEventDay(dateStr){
   const d=new Date(dateStr+'T12:00:00');
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let body='';
-
-  // Events section
   if(ev){
     body+='<div class="modal-section"><div class="modal-section-title">Events</div>';
     if(ev['Gillette Stadium']) body+=`<div class="modal-kv"><span class="modal-kv-label">🏟 Gillette</span><span class="modal-kv-val">${ev['Gillette Stadium']}</span></div>`;
@@ -791,12 +1309,8 @@ function openEventDay(dateStr){
     if(ev['More'])            body+=`<div class="modal-kv"><span class="modal-kv-label">➕ More</span><span class="modal-kv-val">${ev['More']}</span></div>`;
     body+='</div>';
   }
-
-  // Forecast section
   if(fc){
-    const occ=fixOcc(n(fc['Occ%']));
-    const adr=n(fc['ADR Actual']); const bar=n(fc['BAR']);
-    const rooms=n(fc['Total Rooms']); const rev=rooms&&adr?rooms*adr:null;
+    const occ=fixOcc(n(fc['Occ%'])); const adr=n(fc['ADR Actual']); const bar=n(fc['BAR']); const rooms=n(fc['Total Rooms']); const rev=rooms&&adr?rooms*adr:null;
     body+='<div class="modal-section"><div class="modal-section-title">Occupancy &amp; Rate</div>';
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms OTB</span><span class="modal-kv-val">${rooms!=null?rooms:'—'} / ${ROOMS_TOTAL}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Occ%</span><span class="modal-kv-val">${occ!=null?Math.round(occ*10)/10+'%':'—'}</span></div>`;
@@ -805,11 +1319,8 @@ function openEventDay(dateStr){
     body+=`<div class="modal-kv"><span class="modal-kv-label">Est. Revenue</span><span class="modal-kv-val">${fmt(rev)}</span></div>`;
     body+='</div>';
   }
-
-  // Variance vs target
   if(rv){
-    const revTgt=n(rv['Rev Target']); const revAct=n(rv['Room Revenue']);
-    const vr=revAct&&revTgt?revAct-revTgt:null;
+    const revTgt=n(rv['Rev Target']); const revAct=n(rv['Room Revenue']); const vr=revAct&&revTgt?revAct-revTgt:null;
     if(revTgt||revAct){
       body+='<div class="modal-section"><div class="modal-section-title">vs Target</div>';
       body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
@@ -818,34 +1329,54 @@ function openEventDay(dateStr){
       body+='</div>';
     }
   }
-
   if(!ev&&!fc) body='<div class="empty">No data for this date.</div>';
-  openModal(label, body);
+  openModal(label,body);
 }
 
 // ── GROUPS CALENDAR ──────────────────────────────────────────────────────────
+// PRIMARY SOURCE: Block Info Raw (Stay Date = the actual night on property)
+// Joined to Group Pipeline on Block Code for status/at-risk flags
 function renderGroupsCal(){
   const {year,month}=calState.groups;
   document.getElementById('groups-cal-label').textContent=MN_FULL[String(month).padStart(2,'0')]+' '+year;
-  // Build lookup: date -> groups arriving that day
-  const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
-    const dayGroups=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
-    const dayNum2=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
-    if(!dayGroups.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDay('${dateStr}')"><div class="cal-day-num">${dayNum2}</div></div>`;
 
-    const pickups=dayGroups.map(r=>n(r['Pickup %'])).filter(v=>v!=null);
+  // Build a lookup: stayDate → [{blockCode, blockName, rooms, revenue, rate, status, atRisk}]
+  const byDate={};
+  allBi.forEach(r=>{
+    const date=r['Stay Date']; if(!date)return;
+    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+    // Skip fully lost/cancelled blocks
+    if(pipe&&effectiveStatus(pipe)==='LOS') return;
+    if(!byDate[date])byDate[date]=[];
+    byDate[date].push({
+      blockCode:r['Block Code'],
+      blockName:pipe?pipe['Block Name']:r['Block Name']||r['Block Code'],
+      rooms:n(r['Rooms Picked Up'])||0,
+      revenue:n(r['Night Revenue'])||0,
+      rate:n(r['Avg Rate']),
+      status:pipe?pipe['Status']:'',
+      atRisk:pipe?pipe['At Risk?']==='YES':false,
+      pickupPct:pipe?n(pipe['Pickup %']):null,
+    });
+  });
+
+  const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
+    const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
+    const dayBlocks=byDate[dateStr]||[];
+    if(!dayBlocks.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')"><div class="cal-day-num">${dayNumHtml}</div></div>`;
+    const totalRooms=dayBlocks.reduce((s,b)=>s+b.rooms,0);
+    const totalRev=dayBlocks.reduce((s,b)=>s+b.revenue,0);
+    const pickups=dayBlocks.map(b=>b.pickupPct).filter(v=>v!=null);
     const avgPickup=pickups.length?pickups.reduce((s,v)=>s+v,0)/pickups.length:null;
+    const hasRisk=dayBlocks.some(b=>b.atRisk);
     let colorClass='gray-cell';
-    if(avgPickup!=null){ if(avgPickup>=70)colorClass='green-cell'; else if(avgPickup>=50)colorClass='yellow-cell'; else colorClass='red-cell'; }
+    if(avgPickup!=null){if(avgPickup>=70)colorClass='green-cell';else if(avgPickup>=50)colorClass='yellow-cell';else colorClass='red-cell';}
     const fillColor=avgPickup>=70?'#639922':avgPickup>=50?'#EF9F27':'#E24B4A';
     const pctClass=avgPickup>=70?'green':avgPickup>=50?'amber':'red';
-    const totalRooms=dayGroups.reduce((s,r)=>s+(n(r['Current Block'])||0),0);
-    const pickedUp=dayGroups.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-
-    return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openGroupDay('${dateStr}')">
-      <div class="cal-day-num">${dayNum2}</div>
-      <div class="cal-info bold">${dayGroups.length} group${dayGroups.length>1?'s':''}</div>
-      <div class="cal-info">${pickedUp}/${totalRooms} rooms</div>
+    return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')">
+      <div class="cal-day-num">${dayNumHtml}</div>
+      <div class="cal-info bold">${dayBlocks.length} group${dayBlocks.length>1?'s':''} ${hasRisk?'⚠':''}</div>
+      <div class="cal-info">${totalRooms} rooms · ${fmtK(totalRev)}</div>
       <div class="cal-bar-wrap">
         ${avgPickup!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(avgPickup,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${Math.round(avgPickup)}% pickup</div>`:''}
       </div>
@@ -854,30 +1385,38 @@ function renderGroupsCal(){
   document.getElementById('groups-cal-grid').innerHTML=html;
 }
 
-function openGroupDay(dateStr){
-  const dayGroups=allPi.filter(r=>r['Arrival']===dateStr);
+function openGroupDayBI(dateStr){
+  // Source: Block Info Raw for this Stay Date, enriched with Group Pipeline data
   const d=new Date(dateStr+'T12:00:00');
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  if(!dayGroups.length){openModal(label,'<div class="empty">No group blocks arriving this day.</div>');return;}
-
+  const dayBlocks=allBi.filter(r=>r['Stay Date']===dateStr);
+  if(!dayBlocks.length){
+    // Fallback: check pipeline arrival date (legacy)
+    const pipeBlocks=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
+    if(!pipeBlocks.length){openModal(label,'<div class="empty">No group data for this night.</div>');return;}
+  }
   let body='';
-  dayGroups.forEach(r=>{
-    const p=n(r['Pickup %']); const dtc=n(r['Days to Cutoff']);
-    const eff=effectiveStatus(r);
-    const statusColor=eff==='LOS'?'var(--text2)':r['At Risk?']==='YES'?'var(--red)':r['Status']==='DEF'?'var(--green)':'var(--amber)';
+  const totalRooms=dayBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const totalRev=dayBlocks.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+  body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
+    <div><div style="font-size:11px;color:var(--text2)">Total rooms this night</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Night revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${dayBlocks.length}</div></div>
+  </div>`;
+  dayBlocks.forEach(r=>{
+    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+    const p=pipe?n(pipe['Pickup %']):null;
+    const rooms=n(r['Rooms Picked Up']); const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']);
+    const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
     body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
-      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${r['Block Name']||'—'}</div>
-      <div class="modal-kv"><span class="modal-kv-label">Code</span><span class="modal-kv-val">${r['Block Code']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${eff==='LOS'?'Lost/Completed':r['Status']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Market</span><span class="modal-kv-val">${r['Market Type']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Contracted rooms</span><span class="modal-kv-val">${r['Contracted Rooms']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Current block</span><span class="modal-kv-val">${r['Current Block']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Picked up</span><span class="modal-kv-val">${r['Rooms Picked Up']||'0'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Available</span><span class="modal-kv-val">${r['Rooms Available']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${p!=null?Math.round(p)+'%':'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${r['Cutoff Date']||'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Days to cutoff</span><span class="modal-kv-val">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</span></div>
-      ${r['At Risk?']==='YES'&&eff!=='LOS'?'<div style="margin-top:6px"><span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span></div>':''}
+      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:r['Block Code']}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
+      <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${r['Block Code']||'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${rooms!=null?rooms:'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Night revenue</span><span class="modal-kv-val" style="font-weight:700;color:var(--green)">${fmt(rev)}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Rate</span><span class="modal-kv-val">${fmt(rate)}</span></div>
+      ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
+      ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}</span></div>`:''}
     </div>`;
   });
   openModal(label,body);
@@ -891,34 +1430,27 @@ function renderRevCal(){
     const rv=allRv.find(r=>r['Date']===dateStr);
     const fc=allFc.find(r=>r['Date']===dateStr);
     const ev=allEv.find(r=>r['Date']===dateStr);
-
     const revAct=rv?n(rv['Room Revenue']):null;
     const revTgt=rv?n(rv['Rev Target']):null;
     const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
-
-    let colorClass='gray-cell';
-    let pctOfTarget=null;
-    // Color by rooms sold vs rooms goal (sales manager view)
-    const roomsSold=rooms!=null?rooms:(fc?n(fc['Total Rooms']):null);
-    if(roomsSold!=null&&roomsGoal!=null&&roomsGoal>0){
-      pctOfTarget=Math.round(roomsSold/roomsGoal*100);
+    let colorClass='gray-cell'; let pctOfTarget=null;
+    if(rooms!=null&&roomsGoal!=null&&roomsGoal>0){
+      pctOfTarget=Math.round(rooms/roomsGoal*100);
       if(pctOfTarget>=90)colorClass='green-cell';
       else if(pctOfTarget>=70)colorClass='yellow-cell';
       else colorClass='red-cell';
     }
-
     const barColor=colorClass==='green-cell'?'#639922':colorClass==='yellow-cell'?'#EF9F27':'#E24B4A';
     const pctClassR=colorClass==='green-cell'?'green':colorClass==='yellow-cell'?'amber':colorClass==='red-cell'?'red':'gray';
     const eventIcons=[];
     if(ev&&ev['Gillette Stadium']) eventIcons.push('🏟');
     if(ev&&ev['Xfinity Center'])  eventIcons.push('🎵');
     if(ev&&ev['Holiday'])         eventIcons.push('🎉');
-
-    const dayNum3=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
+    const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openRevDay('${dateStr}')">
-      <div class="cal-day-num" style="display:flex;align-items:center;gap:5px">${dayNum3}${eventIcons.length?`<span style="font-size:12px">${eventIcons.join('')}</span>`:''}</div>
-      ${roomsSold!=null&&roomsGoal!=null?`<div class="cal-info bold">${roomsSold}/${roomsGoal} rooms</div>`:(roomsSold!=null?`<div class="cal-info bold">${roomsSold} rooms</div>`:'')}
+      <div class="cal-day-num" style="display:flex;align-items:center;gap:5px">${dayNumHtml}${eventIcons.length?`<span style="font-size:12px">${eventIcons.join('')}</span>`:''}</div>
+      ${rooms!=null&&roomsGoal!=null?`<div class="cal-info bold">${rooms}/${roomsGoal} rooms</div>`:(rooms!=null?`<div class="cal-info bold">${rooms} rooms</div>`:'')}
       ${revAct!=null?`<div class="cal-info">${fmt(revAct)}</div>`:''}
       <div class="cal-bar-wrap">
         ${pctOfTarget!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(pctOfTarget,100)}%;background:${barColor}"></div></div><div class="cal-pct ${pctClassR}">${pctOfTarget}% of goal</div>`:''}
@@ -932,15 +1464,13 @@ function openRevDay(dateStr){
   const rv=allRv.find(r=>r['Date']===dateStr);
   const fc=allFc.find(r=>r['Date']===dateStr);
   const ev=allEv.find(r=>r['Date']===dateStr);
-  const dayGroups=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
+  // Group blocks on property this night (from Block Info Raw)
+  const biBlocks=allBi.filter(r=>r['Stay Date']===dateStr);
   const d=new Date(dateStr+'T12:00:00');
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let body='';
-
-  // Revenue vs target
   if(rv||fc){
-    const revAct=rv?n(rv['Room Revenue']):null;
-    const revTgt=rv?n(rv['Rev Target']):null;
+    const revAct=rv?n(rv['Room Revenue']):null; const revTgt=rv?n(rv['Rev Target']):null;
     const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
     const adr=rv?n(rv['ADR Actual']):(fc?n(fc['ADR Actual']):null);
@@ -950,7 +1480,6 @@ function openRevDay(dateStr){
     const grp=rv?n(rv['Group Rooms']):(fc?n(fc['Group Rooms']):null);
     const varR=revAct&&revTgt?revAct-revTgt:null;
     const varRooms=rooms!=null&&roomsGoal!=null?rooms-roomsGoal:null;
-
     body+='<div class="modal-section"><div class="modal-section-title">Revenue &amp; Rooms</div>';
     body+=`<div class="modal-kv"><span class="modal-kv-label">Room Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
@@ -959,24 +1488,17 @@ function openRevDay(dateStr){
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms goal</span><span class="modal-kv-val">${roomsGoal!=null?roomsGoal:'—'}</span></div>`;
     if(varRooms!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms variance</span><span class="modal-kv-val" style="color:${varRooms>=0?'var(--green)':'var(--red)'}">${varRooms>=0?'+':''}${varRooms}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">ADR</span><span class="modal-kv-val">${fmt(adr)}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">ADR Forecast</span><span class="modal-kv-val">${fmt(adrFc)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">ADR Forecast / BAR</span><span class="modal-kv-val">${fmt(adrFc)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Occ%</span><span class="modal-kv-val">${occ!=null?Math.round(occ*10)/10+'%':'—'}</span></div>`;
     body+='</div>';
-
     if(trn!=null||grp!=null){
       body+='<div class="modal-section"><div class="modal-section-title">Transient vs Group</div>';
       body+=`<div class="modal-kv"><span class="modal-kv-label">Transient rooms</span><span class="modal-kv-val">${trn!=null?trn:'—'}</span></div>`;
       body+=`<div class="modal-kv"><span class="modal-kv-label">Group rooms</span><span class="modal-kv-val">${grp!=null?grp:'—'}</span></div>`;
-      if(trn!=null&&grp!=null&&(trn+grp)>0){
-        const totRm=trn+grp;
-        body+=`<div class="modal-kv"><span class="modal-kv-label">Transient %</span><span class="modal-kv-val">${Math.round(trn/totRm*100)}%</span></div>`;
-        body+=`<div class="modal-kv"><span class="modal-kv-label">Group %</span><span class="modal-kv-val">${Math.round(grp/totRm*100)}%</span></div>`;
-      }
+      if(trn!=null&&grp!=null&&(trn+grp)>0){const tot=trn+grp;body+=`<div class="modal-kv"><span class="modal-kv-label">Transient %</span><span class="modal-kv-val">${Math.round(trn/tot*100)}%</span></div><div class="modal-kv"><span class="modal-kv-label">Group %</span><span class="modal-kv-val">${Math.round(grp/tot*100)}%</span></div>`;}
       body+='</div>';
     }
   }
-
-  // Events on this day
   if(ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||ev['More'])){
     body+='<div class="modal-section"><div class="modal-section-title">Events</div>';
     if(ev['Gillette Stadium']) body+=`<div class="modal-kv"><span class="modal-kv-label">🏟 Gillette</span><span class="modal-kv-val">${ev['Gillette Stadium']}</span></div>`;
@@ -985,21 +1507,23 @@ function openRevDay(dateStr){
     if(ev['More'])            body+=`<div class="modal-kv"><span class="modal-kv-label">➕ More</span><span class="modal-kv-val">${ev['More']}</span></div>`;
     body+='</div>';
   }
-
-  // Group blocks on this day
-  if(dayGroups.length){
-    body+='<div class="modal-section"><div class="modal-section-title">Group blocks arriving</div>';
-    dayGroups.forEach(r=>{
-      const p=n(r['Pickup %']);
+  // Group blocks on property tonight (Block Info Raw)
+  if(biBlocks.length){
+    const biTotRooms=biBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    const biTotRev=biBlocks.reduce((s,r)=>s+(n(r['Night Revenue'])||0),0);
+    body+=`<div class="modal-section"><div class="modal-section-title">Group blocks on property tonight (${biBlocks.length})</div>`;
+    body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} revenue</div>`;
+    biBlocks.forEach(r=>{
+      const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+      const rooms=n(r['Rooms Picked Up']); const rev=n(r['Night Revenue']); const rate=n(r['Avg Rate']);
       body+=`<div style="padding:6px 0;border-bottom:.5px solid var(--border)">
-        <div style="font-weight:600;font-size:12px">${r['Block Name']}</div>
-        <div style="font-size:11px;color:var(--text2)">${r['Rooms Picked Up']||0}/${r['Current Block']||0} picked up (${p!=null?Math.round(p)+'%':'—'}) · ${r['Status']}</div>
+        <div style="font-weight:600;font-size:12px">${pipe?pipe['Block Name']:r['Block Code']}</div>
+        <div style="font-size:11px;color:var(--text2)">${rooms!=null?rooms:'—'} rooms · ${fmt(rev)} · ${fmt(rate)} rate${pipe?' · '+pipe['Status']:''}</div>
       </div>`;
     });
     body+='</div>';
   }
-
-  if(!rv&&!fc&&!ev&&!dayGroups.length) body='<div class="empty">No data for this date.</div>';
+  if(!rv&&!fc&&!ev&&!biBlocks.length) body='<div class="empty">No data for this date.</div>';
   openModal(label,body);
 }
 
@@ -1007,7 +1531,7 @@ function openRevDay(dateStr){
 function renderActions(){
   const today=getToday(); const thisMonth=getThisMonth();
   const actions=[];
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS');
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
   if(risk.length){
     const riskRooms=risk.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
     actions.push({pri:1,icon:'ti-alert-triangle',color:'var(--red)',
@@ -1025,7 +1549,7 @@ function renderActions(){
     desc:'Each OTA booking costs ~18% in commission vs near-zero for direct.',
     action:'Promote Sonesta loyalty rates at check-in, Best Rate Guarantee messaging, and direct corporate contracts.'
   });
-  const cutSoon=allPi.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=14&&r['At Risk?']!=='YES'&&effectiveStatus(r)!=='LOS';});
+  const cutSoon=allPi.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=14&&r['At Risk?']!=='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED';});
   if(cutSoon.length) actions.push({pri:2,icon:'ti-calendar-event',color:'var(--amber)',
     title:`${cutSoon.length} group cutoff${cutSoon.length>1?'s':''} in next 14 days`,
     desc:cutSoon.map(r=>`<b>${r['Block Name']}</b> — ${Math.round(n(r['Pickup %'])||0)}% pickup, ${r['Days to Cutoff']}d`).join('<br>'),
@@ -1043,7 +1567,7 @@ function renderActions(){
       action:'Consider last-minute promos, weekend packages, or outreach to past corporate accounts.'
     });
   }
-  const ten=allPi.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS');
+  const ten=allPi.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
   if(ten.length) actions.push({pri:3,icon:'ti-clock',color:'var(--blue)',
     title:`${ten.length} tentative group${ten.length>1?'s':''} (${ten.reduce((s,r)=>s+(n(r['Current Block'])||0),0)} rooms) awaiting conversion`,
     desc:ten.map(r=>r['Block Name']).join(', '),
