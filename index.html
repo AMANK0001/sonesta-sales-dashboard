@@ -91,31 +91,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .err-banner{padding:10px 14px;background:var(--red-bg);border-radius:var(--radius);font-size:12px;color:var(--red);margin-bottom:1rem;display:none}
 
 /* ── CALENDAR ── */
-.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+/* ── CALENDAR ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
 .cal-nav{display:flex;align-items:center;gap:10px}
-.cal-nav button{padding:5px 12px;border:.5px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:12px;color:var(--text2)}
+.cal-nav button{padding:5px 12px;border:.5px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:12px;color:var(--text2);font-weight:500}
 .cal-nav button:hover{background:var(--bg2)}
-.cal-month-label{font-size:16px;font-weight:600;min-width:140px;text-align:center}
-.cal-legend{display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap}
-.cal-legend span{display:flex;align-items:center;gap:4px}
-.cal-legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-dow{text-align:center;font-size:11px;font-weight:600;color:var(--text2);padding:6px 0}
-.cal-cell{min-height:88px;border-radius:var(--radius);border:.5px solid var(--border);padding:6px 7px;cursor:pointer;transition:all .15s;background:var(--bg);position:relative;overflow:hidden}
-.cal-cell:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.cal-cell.empty{background:transparent;border-color:transparent;cursor:default}
-.cal-cell.today-cell{border-color:var(--chart-blue)!important;border-width:1.5px!important}
-.cal-cell.other-month{opacity:.4}
-.cal-day-num{font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)}
-.cal-cell.today-cell .cal-day-num{color:var(--chart-blue)}
-.cal-dot-row{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:3px}
-.cal-icon{font-size:13px;line-height:1}
-.cal-bar{height:4px;border-radius:2px;margin-top:3px}
-.cal-pct{font-size:10px;font-weight:600;margin-top:2px}
-.cal-cell.green-cell{background:linear-gradient(135deg,#EAF3DE 0%,var(--bg) 60%)}
-.cal-cell.yellow-cell{background:linear-gradient(135deg,#FAEEDA 0%,var(--bg) 60%)}
-.cal-cell.red-cell{background:linear-gradient(135deg,#FCEBEB 0%,var(--bg) 60%)}
-.cal-cell.gray-cell{background:var(--bg)}
+.cal-month-label{font-size:17px;font-weight:700;min-width:160px;text-align:center;letter-spacing:-.2px}
+.cal-legend{display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;align-items:center}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:8px 0;text-transform:uppercase;letter-spacing:.04em}
+/* Base cell — clean white card, NO gradient */
+.cal-cell{
+  min-height:96px;border-radius:var(--radius);
+  background:var(--bg);
+  border:.5px solid var(--border);
+  border-left:3px solid transparent;
+  padding:8px 9px 6px;
+  cursor:pointer;transition:box-shadow .15s,border-color .15s;
+  position:relative;display:flex;flex-direction:column;gap:3px;
+}
+.cal-cell:hover{box-shadow:0 3px 12px rgba(0,0,0,.1);border-color:var(--border2)}
+.cal-cell.empty{background:transparent;border-color:transparent!important;cursor:default;box-shadow:none}
+/* Status via left border accent only */
+.cal-cell.green-cell {border-left-color:#639922}
+.cal-cell.yellow-cell{border-left-color:#EF9F27}
+.cal-cell.red-cell   {border-left-color:#E24B4A}
+.cal-cell.gray-cell  {border-left-color:transparent}
+/* Today highlight: blue ring */
+.cal-cell.today-cell{box-shadow:0 0 0 2px var(--chart-blue)!important;border-left-width:3px}
+/* Day number */
+.cal-day-num{
+  font-size:13px;font-weight:700;color:var(--text);
+  line-height:1;margin-bottom:2px;
+}
+.cal-cell.today-cell .cal-day-num{
+  background:var(--chart-blue);color:#fff;
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;
+}
+/* Event icons row */
+.cal-icon-row{display:flex;gap:4px;flex-wrap:wrap;font-size:14px;line-height:1.2}
+/* Mini info text */
+.cal-info{font-size:10px;color:var(--text2);font-weight:500;line-height:1.3}
+.cal-info.bold{font-weight:700;color:var(--text);font-size:11px}
+/* Progress bar at bottom */
+.cal-bar-wrap{margin-top:auto;padding-top:4px}
+.cal-bar{height:3px;border-radius:2px;background:var(--border)}
+.cal-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.cal-pct{font-size:10px;font-weight:700;margin-top:2px}
+.cal-pct.green{color:#639922}.cal-pct.amber{color:#EF9F27}.cal-pct.red{color:#E24B4A}.cal-pct.gray{color:var(--text3)}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
@@ -716,24 +743,30 @@ function renderEventsCal(){
     const ev=allEv.find(r=>r['Date']===dateStr);
     const fc=allFc.find(r=>r['Date']===dateStr);
     const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||ev['Laugh Patriots Place']||ev['More']);
-    if(!hasEvent) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')"><div class="cal-day-num">${d}</div></div>`;
+    if(!hasEvent) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')"><div class="cal-day-num">${isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px">${d}</span>`:d}</div></div>`;
 
     const occ=fc?fixOcc(n(fc['Occ%'])):null;
+    const rooms=fc?n(fc['Total Rooms']):null;
     let colorClass='gray-cell';
     if(occ!=null){ if(occ>=70)colorClass='green-cell'; else if(occ>=50)colorClass='yellow-cell'; else colorClass='red-cell'; }
 
     const icons=[];
-    if(ev['Gillette Stadium']) icons.push('<span title="Gillette Stadium">🏟</span>');
-    if(ev['Xfinity Center'])  icons.push('<span title="Xfinity Center">🎵</span>');
-    if(ev['Holiday'])         icons.push('<span title="Holiday">🎉</span>');
-    if(ev['Laugh Patriots Place']) icons.push('<span title="Laugh Patriots Place">😂</span>');
-    if(ev['More'])            icons.push('<span title="More events">➕</span>');
+    if(ev['Gillette Stadium']) icons.push(`<span title="${ev['Gillette Stadium']}">🏟</span>`);
+    if(ev['Xfinity Center'])  icons.push(`<span title="${ev['Xfinity Center']}">🎵</span>`);
+    if(ev['Holiday'])         icons.push(`<span title="${ev['Holiday']}">🎉</span>`);
+    if(ev['Laugh Patriots Place']) icons.push(`<span title="${ev['Laugh Patriots Place']}">😂</span>`);
+    if(ev['More'])            icons.push(`<span title="${ev['More']}">➕</span>`);
 
-    const barColor=occ>=70?'#639922':occ>=50?'#EF9F27':'#E24B4A';
+    const pctClass=occ>=70?'green':occ>=50?'amber':'red';
+    const fillColor=occ>=70?'#639922':occ>=50?'#EF9F27':'#E24B4A';
+    const dayNum=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openEventDay('${dateStr}')">
-      <div class="cal-day-num">${d}</div>
-      <div class="cal-dot-row">${icons.join('')}</div>
-      ${occ!=null?`<div class="cal-bar" style="width:${Math.min(occ,100)}%;background:${barColor}"></div><div class="cal-pct" style="color:${barColor}">${Math.round(occ)}%</div>`:''}
+      <div class="cal-day-num">${dayNum}</div>
+      <div class="cal-icon-row">${icons.join('')}</div>
+      ${rooms!=null?`<div class="cal-info">${rooms}/${ROOMS_TOTAL} rooms</div>`:''}
+      <div class="cal-bar-wrap">
+        ${occ!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(occ,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${Math.round(occ)}% occ</div>`:''}
+      </div>
     </div>`;
   });
   document.getElementById('events-cal-grid').innerHTML=html;
@@ -797,20 +830,25 @@ function renderGroupsCal(){
   // Build lookup: date -> groups arriving that day
   const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
     const dayGroups=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
-    if(!dayGroups.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDay('${dateStr}')"><div class="cal-day-num">${d}</div></div>`;
+    const dayNum2=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
+    if(!dayGroups.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDay('${dateStr}')"><div class="cal-day-num">${dayNum2}</div></div>`;
 
-    // avg pickup pct across groups that day
     const pickups=dayGroups.map(r=>n(r['Pickup %'])).filter(v=>v!=null);
     const avgPickup=pickups.length?pickups.reduce((s,v)=>s+v,0)/pickups.length:null;
     let colorClass='gray-cell';
     if(avgPickup!=null){ if(avgPickup>=70)colorClass='green-cell'; else if(avgPickup>=50)colorClass='yellow-cell'; else colorClass='red-cell'; }
-    const barColor=avgPickup>=70?'#639922':avgPickup>=50?'#EF9F27':'#E24B4A';
+    const fillColor=avgPickup>=70?'#639922':avgPickup>=50?'#EF9F27':'#E24B4A';
+    const pctClass=avgPickup>=70?'green':avgPickup>=50?'amber':'red';
     const totalRooms=dayGroups.reduce((s,r)=>s+(n(r['Current Block'])||0),0);
+    const pickedUp=dayGroups.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
 
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openGroupDay('${dateStr}')">
-      <div class="cal-day-num">${d}</div>
-      <div style="font-size:10px;color:var(--text2);margin-bottom:2px">${dayGroups.length} grp · ${totalRooms}rm</div>
-      ${avgPickup!=null?`<div class="cal-bar" style="width:${Math.min(avgPickup,100)}%;background:${barColor}"></div><div class="cal-pct" style="color:${barColor}">${Math.round(avgPickup)}% pickup</div>`:''}
+      <div class="cal-day-num">${dayNum2}</div>
+      <div class="cal-info bold">${dayGroups.length} group${dayGroups.length>1?'s':''}</div>
+      <div class="cal-info">${pickedUp}/${totalRooms} rooms</div>
+      <div class="cal-bar-wrap">
+        ${avgPickup!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(avgPickup,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${Math.round(avgPickup)}% pickup</div>`:''}
+      </div>
     </div>`;
   });
   document.getElementById('groups-cal-grid').innerHTML=html;
@@ -877,16 +915,20 @@ function renderRevCal(){
     }
 
     const barColor=colorClass==='green-cell'?'#639922':colorClass==='yellow-cell'?'#EF9F27':'#E24B4A';
+    const pctClassR=colorClass==='green-cell'?'green':colorClass==='yellow-cell'?'amber':colorClass==='red-cell'?'red':'gray';
     const eventIcons=[];
     if(ev&&ev['Gillette Stadium']) eventIcons.push('🏟');
     if(ev&&ev['Xfinity Center'])  eventIcons.push('🎵');
     if(ev&&ev['Holiday'])         eventIcons.push('🎉');
 
+    const dayNum3=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:d;
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openRevDay('${dateStr}')">
-      <div class="cal-day-num">${d} ${eventIcons.join('')}</div>
-      ${rooms!=null?`<div style="font-size:10px;color:var(--text2)">${rooms}${roomsGoal?'/'+roomsGoal:''}rm</div>`:''}
-      ${revAct!=null?`<div style="font-size:10px;font-weight:600">${fmt(revAct)}</div>`:''}
-      ${pctOfTarget!=null?`<div class="cal-bar" style="width:${Math.min(pctOfTarget,100)}%;background:${barColor}"></div><div class="cal-pct" style="color:${barColor}">${pctOfTarget}% tgt</div>`:''}
+      <div class="cal-day-num" style="display:flex;align-items:center;gap:5px">${dayNum3}${eventIcons.length?`<span style="font-size:12px">${eventIcons.join('')}</span>`:''}</div>
+      ${rooms!=null?`<div class="cal-info">${rooms}${roomsGoal?'/'+roomsGoal:''} rm</div>`:''}
+      ${revAct!=null?`<div class="cal-info bold">${fmt(revAct)}</div>`:''}
+      <div class="cal-bar-wrap">
+        ${pctOfTarget!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(pctOfTarget,100)}%;background:${barColor}"></div></div><div class="cal-pct ${pctClassR}">${pctOfTarget}% of tgt</div>`:''}
+      </div>
     </div>`;
   });
   document.getElementById('rev-cal-grid').innerHTML=html;
