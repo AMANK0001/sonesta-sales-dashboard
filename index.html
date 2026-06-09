@@ -171,6 +171,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('revenue',this)"><i class="ti ti-chart-bar"></i> Revenue</button>
   <button class="nav-tab" onclick="showPage('channels',this)"><i class="ti ti-sitemap"></i> Channels</button>
   <button class="nav-tab" onclick="showPage('comp-rates',this)"><i class="ti ti-trending-up"></i> Comp Rates</button>
+  <button class="nav-tab" onclick="showPage('grp-roomtype',this)"><i class="ti ti-bed"></i> Group Rooms</button>
+  <button class="nav-tab" onclick="showPage('roomtype-dive',this)"><i class="ti ti-layout-grid"></i> Room Mix</button>
   <button class="nav-tab" onclick="showPage('events-cal',this)"><i class="ti ti-calendar-event"></i> Events cal</button>
   <button class="nav-tab" onclick="showPage('groups-cal',this)"><i class="ti ti-calendar-stats"></i> Groups cal</button>
   <button class="nav-tab" onclick="showPage('rev-cal',this)"><i class="ti ti-calendar-dollar"></i> Rev cal</button>
@@ -394,6 +396,163 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- GROUP ROOM TYPES -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-grp-roomtype">
+  <div class="metric-grid" id="grt-kpis"></div>
+  <div class="tab-row" style="margin-bottom:1rem">
+    <button class="ftab active" onclick="grtTab('mix',this)"><i class="ti ti-chart-donut" style="font-size:11px"></i> Room Mix</button>
+    <button class="ftab" onclick="grtTab('byblock',this)"><i class="ti ti-list" style="font-size:11px"></i> By Block</button>
+    <button class="ftab" onclick="grtTab('bymonth',this)"><i class="ti ti-calendar" style="font-size:11px"></i> By Month</button>
+    <button class="ftab" onclick="grtTab('rate',this)"><i class="ti ti-currency-dollar" style="font-size:11px"></i> Rate by Type</button>
+  </div>
+
+  <div id="grtpanel-mix">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Group room type mix (nights)</div>
+        <div class="chart-wrap-lg"><canvas id="grtMixChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">King vs Queen vs Suite — room nights by month</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>King</span>
+          <span><span class="legend-sq" style="background:var(--chart-green)"></span>Queen</span>
+          <span><span class="legend-sq" style="background:var(--chart-amber)"></span>Suite</span>
+        </div>
+        <div class="chart-wrap-lg"><canvas id="grtMonthChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Room type detail — group nights</div><div id="grt-mix-tbl"></div></div>
+  </div>
+
+  <div id="grtpanel-byblock" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border)">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="grt-search" type="text" placeholder="Search block…" oninput="renderGrtByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;flex:1;min-width:140px">
+          <select id="grt-type-filter" onchange="renderGrtByBlock()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="all">All room groups</option>
+            <option value="King">King only</option>
+            <option value="Queen">Queen only</option>
+            <option value="Suite">Suite only</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><div id="grt-block-tbl"></div></div>
+    </div>
+  </div>
+
+  <div id="grtpanel-bymonth" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden"><div id="grt-month-tbl" style="overflow-x:auto"></div></div>
+  </div>
+
+  <div id="grtpanel-rate" style="display:none">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Avg rate by room type (group)</div>
+        <div class="chart-wrap-lg"><canvas id="grtRateChart"></canvas></div>
+      </div>
+      <div class="card"><div class="card-title">Rate by room type — detail</div><div id="grt-rate-tbl"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ROOM MIX DEEP DIVE (all reservations — transient + group) -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-roomtype-dive">
+  <div class="metric-grid" id="rtd-kpis"></div>
+  <div class="tab-row" style="margin-bottom:1rem">
+    <button class="ftab active" onclick="rtdTab('overview',this)"><i class="ti ti-chart-bar" style="font-size:11px"></i> Overview</button>
+    <button class="ftab" onclick="rtdTab('trend',this)"><i class="ti ti-chart-line" style="font-size:11px"></i> Monthly Trend</button>
+    <button class="ftab" onclick="rtdTab('grpvtrn',this)"><i class="ti ti-arrows-split" style="font-size:11px"></i> Group vs Transient</button>
+    <button class="ftab" onclick="rtdTab('detail',this)"><i class="ti ti-table" style="font-size:11px"></i> Full Detail</button>
+  </div>
+
+  <div id="rtdpanel-overview">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Overall room mix — rooms sold YTD</div>
+        <div class="chart-wrap-lg"><canvas id="rtdPieChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Revenue by room group YTD</div>
+        <div class="chart-wrap-lg"><canvas id="rtdRevChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Room type summary</div><div id="rtd-summary-tbl"></div></div>
+  </div>
+
+  <div id="rtdpanel-trend" style="display:none">
+    <div class="card">
+      <div class="card-title">Room group mix by month — rooms sold</div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:var(--chart-blue)"></span>King</span>
+        <span><span class="legend-sq" style="background:var(--chart-green)"></span>Queen</span>
+        <span><span class="legend-sq" style="background:var(--chart-amber)"></span>Suite</span>
+      </div>
+      <div class="chart-wrap-xl"><canvas id="rtdTrendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">ADR by room group by month</div>
+      <div class="chart-wrap-lg"><canvas id="rtdAdrChart"></canvas></div>
+    </div>
+  </div>
+
+  <div id="rtdpanel-grpvtrn" style="display:none">
+    <div class="alert" style="background:var(--blue-bg);color:var(--blue);margin-bottom:1rem">
+      <i class="ti ti-info-circle"></i>
+      <span>Group room type data from Block Info Raw. Transient = total (Room Type Raw) minus group nights for that room type and date.</span>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">King rooms — group vs transient by month</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Group</span>
+          <span><span class="legend-sq" style="background:rgba(55,138,221,0.3)"></span>Transient</span>
+        </div>
+        <div class="chart-wrap-lg"><canvas id="rtdKingChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Queen rooms — group vs transient by month</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-green)"></span>Group</span>
+          <span><span class="legend-sq" style="background:rgba(99,153,34,0.3)"></span>Transient</span>
+        </div>
+        <div class="chart-wrap-lg"><canvas id="rtdQueenChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Group vs Transient by room type — monthly table</div><div id="rtd-gvt-tbl"></div></div>
+  </div>
+
+  <div id="rtdpanel-detail" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border)">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select id="rtd-month-filter" onchange="renderRtdDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="all">All months</option>
+            <option value="2026-01">January</option><option value="2026-02">February</option>
+            <option value="2026-03">March</option><option value="2026-04">April</option>
+            <option value="2026-05">May</option><option value="2026-06">June</option>
+            <option value="2026-07">July</option><option value="2026-08">August</option>
+            <option value="2026-09">September</option><option value="2026-10">October</option>
+            <option value="2026-11">November</option><option value="2026-12">December</option>
+          </select>
+          <select id="rtd-group-filter" onchange="renderRtdDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="all">All groups</option>
+            <option value="King">King</option>
+            <option value="Queen">Queen</option>
+            <option value="Suite">Suite</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><div id="rtd-detail-tbl"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- EVENTS CALENDAR -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-events-cal">
@@ -571,7 +730,7 @@ const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07'
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
 
 const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[];
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[];
 let pipeCurrentMode='risk';
 
 // Calendar state
@@ -588,6 +747,8 @@ function showPage(id,btn){
   if(id==='rev-cal')    renderRevCal();
   if(id==='grp-rev')    renderGroupsRevenue();
   if(id==='comp-rates') renderCompRates();
+  if(id==='grp-roomtype') renderGrpRoomType();
+  if(id==='roomtype-dive') renderRoomTypeDive();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -603,14 +764,12 @@ function toRows(vals){
   return vals.slice(1).filter(row=>row.some(c=>c&&c.trim())).map(row=>{const o={};h.forEach((k,i)=>o[k]=(row[i]||'').trim());return o;});
 }
 function n(v){ if(v==null||v==='')return null; const s=String(v).replace(/[$,%]/g,'').replace(/,/g,'').trim(); const x=parseFloat(s); return isNaN(x)?null:x; }
-// Revenue for a Block Info row:
-// Primary: Rooms Picked Up × Avg Rate (only when rooms > 0 and rate exists)
-// Fallback for past dates with no rate: use Night Revenue from Opera directly
+// Block Info Raw v5 schema: col 6=Room Type, col 7=Rooms Picked Up, col 8=Rate, col 9=Night Revenue
+// biCalcRev: primary = rooms × Rate; fallback for past dates = Night Revenue
 function biCalcRev(r){
   const rooms=n(r['Rooms Picked Up']);
-  const rate=n(r['Avg Rate']);
+  const rate=n(r['Rate']);  // v5: column is "Rate" not "Avg Rate"
   if(rooms&&rooms>0&&rate&&rate>0) return rooms*rate;
-  // Fallback: if arrival has passed and we have Night Revenue, use it
   const today=getToday();
   const stayDate=r['Stay Date']||'';
   const nightRev=n(r['Night Revenue']);
@@ -618,6 +777,8 @@ function biCalcRev(r){
   return 0;
 }
 function biHasRooms(r){ return (n(r['Rooms Picked Up'])||0)>0; }
+// biAvgRate: read Rate column (v5)
+function biRate(r){ return n(r['Rate'])||null; }
 function fmt(v){ if(v==null)return'—'; return'$'+Math.round(v).toLocaleString('en-US'); }
 function fmtK(v){ if(v==null)return'—'; if(Math.abs(v)>=1000000) return'$'+(v/1000000).toFixed(1)+'M'; if(Math.abs(v)>=1000) return'$'+(v/1000).toFixed(1)+'k'; return'$'+Math.round(v).toLocaleString(); }
 function fixOcc(v){ if(v==null)return null; return v<2?v*100:v; }
@@ -647,15 +808,16 @@ async function loadAll(){
   document.getElementById('ts').textContent='Refreshing...';
   document.getElementById('err').style.display='none';
   try{
-    const [fcV,rvV,chV,piV,moV,evV,biV,riV]=await Promise.all([
+    const [fcV,rvV,chV,piV,moV,evV,biV,riV,rtV]=await Promise.all([
       fetchTab(HUB,'Daily Forecast'), fetchTab(HUB,'Daily Revenue'),
       fetchTab(HUB,'Channel Summary'), fetchTab(HUB,'Group Pipeline'),
       fetchTab(HUB,'Monthly Summary'), fetchTab(HUB,'Events'),
       fetchTab(HUB,'Block Info Raw'), fetchTab(HUB,'Rate Intelligence'),
+      fetchTab(HUB,'Room Type Raw'),
     ]);
     allFc=toRows(fcV); allRv=toRows(rvV); allCh=toRows(chV);
     allPi=toRows(piV); allMo=toRows(moV).map(r=>({...r,_mo:normMonth(r['Month'])})).filter(r=>r._mo);
-    allEv=toRows(evV); allBi=toRows(biV); allRi=toRows(riV);
+    allEv=toRows(evV); allBi=toRows(biV); allRi=toRows(riV); allRt=toRows(rtV);
 
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
@@ -861,7 +1023,7 @@ function filterPipe(mode,btn){
   let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Group</th><th>Arrival</th><th>Status</th>';
   if(!isHistorical) html+='<th>Pickup</th><th>Avail</th><th>Cutoff</th><th>Flag</th>';
   else if(mode==='died') html+='<th>Block size</th><th>Contracted</th><th>Market</th><th>Note</th>';
-  else html+='<th>Rooms picked up</th><th>Avg Rate</th><th>Revenue</th><th>Market</th>';
+  else html+='<th>Pickup</th><th>Rooms picked up</th><th>Avg Rate</th><th>Revenue</th><th>Market</th>';
   html+='</tr></thead><tbody>';
 
   rows.forEach(r=>{
@@ -879,8 +1041,12 @@ function filterPipe(mode,btn){
     const fb=isR?'<span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span>':
               dtc!=null&&dtc<=7?'<span class="badge b-amber">Cutoff soon</span>':
               '<span class="badge b-gray">OK</span>';
-    const avgRate=n(r['Avg Rate']);
-    const actRev=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
+    // Avg Rate: from Block Info Raw (grouped by block code, weighted avg)
+    const biRows=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b));
+    const totalRoomsBI=biRows.reduce((s,b)=>s+(n(b['Rooms Picked Up'])||0),0);
+    const totalRevBI=biRows.reduce((s,b)=>s+biCalcRev(b),0);
+    const avgRateCalc=totalRoomsBI>0?totalRevBI/totalRoomsBI:n(r['Rate']||r['Avg Rate']);
+    const actRev=totalRevBI||0;
     html+=`<tr><td style="padding:10px 14px"><div style="font-weight:600">${r['Block Name']||'—'}</div><div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div></td>
       <td>${r['Arrival']||'—'}</td><td>${sb}</td>`;
     if(!isHistorical){
@@ -896,8 +1062,12 @@ function filterPipe(mode,btn){
         <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>
         <td style="font-size:11px;color:var(--text3)">0 rooms picked up, arrival passed</td>`;
     } else {
-      html+=`<td style="font-weight:600">${r['Rooms Picked Up']||'0'}</td>
-        <td>${avgRate!=null?fmt(avgRate):'—'}</td>
+      // completed + lost: pickup bar + rooms + rate + revenue + market
+      html+=`<td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill ${fc}" style="width:${Math.min(p||0,100)}%"></div></div>
+        <span style="font-size:12px;font-weight:600;min-width:32px;text-align:right">${p!=null?Math.round(p)+'%':'—'}</span></div>
+        <div style="font-size:11px;color:var(--text2)">${r['Rooms Picked Up']||'0'}/${r['Current Block']||'0'}</div></td>
+        <td style="font-weight:600">${r['Rooms Picked Up']||'0'}</td>
+        <td>${avgRateCalc!=null?fmt(avgRateCalc):'—'}</td>
         <td style="font-weight:700;color:${actRev>0?'var(--green)':'var(--text)'}">${actRev>0?fmt(actRev):'—'}</td>
         <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>`;
     }
@@ -950,7 +1120,7 @@ function renderGrKPIs(){
   // OTB revenue: active pipeline blocks — rooms picked up × avg rate from Block Info
   const otbRooms=active.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
   const otbRev=active.reduce((s,r)=>{
-    const ar=n(r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
+    const ar=n(r['Rate']||r['Avg Rate']); const rp=n(r['Rooms Picked Up']);
     return s+(ar&&rp&&rp>0?ar*rp:0);
   },0);
 
@@ -1004,7 +1174,7 @@ function renderGrSummaryCharts(){
     const hasBI=allBi.some(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
     if(hasBI) return null;
     const pipe=allPi.filter(r=>(r['Arrival']||'').startsWith(mo)&&effectiveStatus(r)!=='LOS');
-    const v=pipe.reduce((s,r)=>{const ar=n(r['Avg Rate']);const rp=n(r['Rooms Picked Up']);return s+(ar&&rp&&rp>0?ar*rp:0);},0);
+    const v=pipe.reduce((s,r)=>{const ar=n(r['Rate']||r['Avg Rate']);const rp=n(r['Rooms Picked Up']);return s+(ar&&rp&&rp>0?ar*rp:0);},0);
     return v>0?v:null;
   });
 
@@ -1132,7 +1302,7 @@ function renderGrByBlock(){
   let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Block</th><th>Arrival</th><th>Status</th><th>Market</th><th>Rooms picked up</th><th>Block size</th><th>Pickup %</th><th>Avg Rate</th><th>Calc. Revenue</th></tr></thead><tbody>';
   rows.forEach(r=>{
     const eff=effectiveStatus(r);
-    const p=n(r['Pickup %']); const avgRate=n(r['Avg Rate']);
+    const p=n(r['Pickup %']); const avgRate=n(r['Rate']||r['Avg Rate']);
     const actRev=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
     const fc=p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
     const sb=eff==='COMPLETED'?'<span class="badge b-purple">Completed</span>':
@@ -1268,7 +1438,7 @@ function renderGrNightly(){
   }
   html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms Picked Up</th><th>Avg Rate</th><th>Calc. Revenue</th></tr></thead><tbody>';
   rows.forEach(r=>{
-    const rate=n(r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
+    const rate=n(r['Rate']||r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
     const calcRev=biCalcRev(r);
     const zeroRow=!biHasRooms(r);
     html+=`<tr style="${zeroRow?'opacity:0.45':''}">
@@ -1515,7 +1685,7 @@ function renderGroupsCal(){
       blockName:pipe?pipe['Block Name']:r['Block Name']||r['Block Code'],
       rooms:n(r['Rooms Picked Up'])||0,
       revenue:biCalcRev(r),
-      rate:n(r['Avg Rate']),
+      rate:n(r['Rate']||r['Avg Rate']),
       status:pipe?pipe['Status']:'',
       atRisk:pipe?pipe['At Risk?']==='YES':false,
       pickupPct:pipe?n(pipe['Pickup %']):null,
@@ -1575,7 +1745,7 @@ function openGroupDayBI(dateStr){
   dayBlocks.forEach(r=>{
     const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
     const p=pipe?n(pipe['Pickup %']):null;
-    const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); const calcRev=biCalcRev(r);
+    const rooms=n(r['Rooms Picked Up']); const rate=n(r['Rate']||r['Avg Rate']); const calcRev=biCalcRev(r);
     const currentBlock=pipe?n(pipe['Current Block']):null;
     const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
@@ -1688,7 +1858,7 @@ function openRevDay(dateStr){
     body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} calc. revenue</div>`;
     biBlocks.forEach(r=>{
       const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
-      const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); const calcRev=biCalcRev(r);
+      const rooms=n(r['Rooms Picked Up']); const rate=n(r['Rate']||r['Avg Rate']); const calcRev=biCalcRev(r);
       body+=`<div style="padding:6px 0;border-bottom:.5px solid var(--border)">
         <div style="font-weight:600;font-size:12px">${pipe?pipe['Block Name']:r['Block Code']}</div>
         <div style="font-size:11px;color:var(--text2)">${rooms!=null?rooms:'—'} rooms · ${calcRev>0?fmt(calcRev):'—'} · ${fmt(rate)} rate${pipe?' · '+pipe['Status']:''}</div>
@@ -2008,6 +2178,423 @@ function renderCompTrendChart(){
               y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}
     }
   });
+}
+
+// ── GROUP ROOM TYPES ──────────────────────────────────────────────────────────
+// Block Info Raw v5: Block Name, Block Code, Arrival, Departure, Stay Date, Room Type, Rooms Picked Up, Rate, Night Revenue
+const KING_TYPES =['D1K','D1KA','D1KB','D1KC','D1KNB','D1KNP','U1K','U1KA','U1KB','U1KNB'];
+const QUEEN_TYPES=['D2Q','D2QA','D2QB','D2QC','D2QNB','D2QNP','D2DA','D2DB','U2D','U2DA','U2DB'];
+const SUITE_TYPES=['U1KS','U2KS','U1KSA','U2K'];
+function roomGroup(code){
+  if(!code)return'Other';
+  const c=code.toUpperCase().trim();
+  if(KING_TYPES.some(k=>c===k||c.startsWith(k)))return'King';
+  if(QUEEN_TYPES.some(q=>c===q||c.startsWith(q)))return'Queen';
+  if(SUITE_TYPES.some(s=>c===s||c.startsWith(s)))return'Suite';
+  return'Other';
+}
+
+let grtCurrentTab='mix';
+function grtTab(tab,btn){
+  grtCurrentTab=tab;
+  document.querySelectorAll('#page-grp-roomtype .ftab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  ['mix','byblock','bymonth','rate'].forEach(p=>{
+    document.getElementById('grtpanel-'+p).style.display=tab===p?'':'none';
+  });
+  if(tab==='byblock') renderGrtByBlock();
+  if(tab==='bymonth') renderGrtByMonth();
+  if(tab==='rate')    renderGrtRate();
+}
+
+function renderGrpRoomType(){
+  // Only bi rows with rooms > 0
+  const biR=allBi.filter(r=>biHasRooms(r));
+  const totalNights=biR.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const totalRev=biR.reduce((s,r)=>s+biCalcRev(r),0);
+  const kingNights=biR.filter(r=>roomGroup(r['Room Type'])==='King').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const queenNights=biR.filter(r=>roomGroup(r['Room Type'])==='Queen').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const suiteNights=biR.filter(r=>roomGroup(r['Room Type'])==='Suite').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+  const uniqueBlocks=new Set(biR.map(r=>r['Block Code'])).size;
+
+  document.getElementById('grt-kpis').innerHTML=`
+    <div class="mc"><div class="mc-label">Total group room nights</div><div class="mc-val">${totalNights.toLocaleString()}</div><div class="mc-sub">from Block Info</div></div>
+    <div class="mc"><div class="mc-label">King nights</div><div class="mc-val" style="color:var(--chart-blue)">${kingNights.toLocaleString()}</div><div class="mc-sub">${totalNights>0?Math.round(kingNights/totalNights*100):'—'}% of group nights</div></div>
+    <div class="mc"><div class="mc-label">Queen nights</div><div class="mc-val" style="color:var(--chart-green)">${queenNights.toLocaleString()}</div><div class="mc-sub">${totalNights>0?Math.round(queenNights/totalNights*100):'—'}% of group nights</div></div>
+    <div class="mc"><div class="mc-label">Suite nights</div><div class="mc-val" style="color:var(--chart-amber)">${suiteNights.toLocaleString()}</div><div class="mc-sub">${totalNights>0?Math.round(suiteNights/totalNights*100):'—'}% of group nights</div></div>
+    <div class="mc"><div class="mc-label">Total group revenue</div><div class="mc-val">${fmtK(totalRev)}</div><div class="mc-sub">${uniqueBlocks} blocks</div></div>`;
+
+  renderGrtMix(biR,totalNights);
+  if(grtCurrentTab==='byblock') renderGrtByBlock();
+  if(grtCurrentTab==='bymonth') renderGrtByMonth();
+  if(grtCurrentTab==='rate')    renderGrtRate();
+}
+
+function renderGrtMix(biR,totalNights){
+  // Donut chart by room group
+  const groups=['King','Queen','Suite','Other'];
+  const gColors=['#378ADD','#639922','#EF9F27','#888780'];
+  const gNights=groups.map(g=>biR.filter(r=>roomGroup(r['Room Type'])===g).reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  if(charts.grtMix)charts.grtMix.destroy();
+  charts.grtMix=new Chart(document.getElementById('grtMixChart'),{
+    type:'doughnut',data:{labels:groups,datasets:[{data:gNights,backgroundColor:gColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toLocaleString()+' nights ('+(totalNights>0?Math.round(c.parsed/totalNights*100):0)+'%)'}}}}
+  });
+
+  // Monthly stacked bar
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const mKing=MONTHS.map(mo=>biR.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&roomGroup(r['Room Type'])==='King').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  const mQueen=MONTHS.map(mo=>biR.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&roomGroup(r['Room Type'])==='Queen').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  const mSuite=MONTHS.map(mo=>biR.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&roomGroup(r['Room Type'])==='Suite').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  if(charts.grtMonth)charts.grtMonth.destroy();
+  charts.grtMonth=new Chart(document.getElementById('grtMonthChart'),{
+    type:'bar',data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'King',data:mKing,backgroundColor:'#378ADD',borderRadius:2},
+      {label:'Queen',data:mQueen,backgroundColor:'#639922',borderRadius:2},
+      {label:'Suite',data:mSuite,backgroundColor:'#EF9F27',borderRadius:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  // Detail table by room code
+  const codeMap={};
+  biR.forEach(r=>{
+    const code=r['Room Type']||'Unknown'; const grp=roomGroup(code);
+    if(!codeMap[code])codeMap[code]={code,grp,nights:0,rev:0,rates:[]};
+    const rms=n(r['Rooms Picked Up'])||0; const rt=biRate(r);
+    codeMap[code].nights+=rms;
+    codeMap[code].rev+=biCalcRev(r);
+    if(rt&&rms>0)for(let i=0;i<rms;i++)codeMap[code].rates.push(rt);
+  });
+  const codes=Object.values(codeMap).sort((a,b)=>b.nights-a.nights);
+  const gColors2={'King':'#378ADD','Queen':'#639922','Suite':'#EF9F27','Other':'#888780'};
+  let tbl='<table class="tbl"><thead><tr><th>Room Code</th><th>Group</th><th>Nights</th><th>Share</th><th>Avg Rate</th><th>Revenue</th></tr></thead><tbody>';
+  codes.forEach(c=>{
+    const avgR=c.rates.length?c.rates.reduce((s,v)=>s+v,0)/c.rates.length:null;
+    const pct=totalNights>0?Math.round(c.nights/totalNights*100):0;
+    tbl+=`<tr>
+      <td style="font-weight:600">${c.code}</td>
+      <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${gColors2[c.grp]||'#888'};margin-right:5px;vertical-align:middle"></span>${c.grp}</td>
+      <td style="font-weight:600">${c.nights.toLocaleString()}</td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${gColors2[c.grp]||'#888'}"></div></div><span style="font-size:12px;font-weight:600;min-width:28px;text-align:right">${pct}%</span></div></td>
+      <td>${avgR!=null?fmt(avgR):'—'}</td>
+      <td style="font-weight:600;color:var(--green)">${c.rev>0?fmt(c.rev):'—'}</td>
+    </tr>`;
+  });
+  tbl+='</tbody></table>';
+  document.getElementById('grt-mix-tbl').innerHTML=tbl;
+}
+
+function renderGrtByBlock(){
+  const search=(document.getElementById('grt-search')?.value||'').toLowerCase();
+  const typeF=document.getElementById('grt-type-filter')?.value||'all';
+  // Group by Block Code
+  const blockMap={};
+  allBi.filter(r=>biHasRooms(r)).forEach(r=>{
+    const grp=roomGroup(r['Room Type']);
+    if(typeF!=='all'&&grp!==typeF)return;
+    const code=r['Block Code']||'?';
+    if(!blockMap[code])blockMap[code]={code,name:r['Block Name']||code,rooms:{},totalNights:0,totalRev:0};
+    const rms=n(r['Rooms Picked Up'])||0;
+    blockMap[code].totalNights+=rms;
+    blockMap[code].totalRev+=biCalcRev(r);
+    if(!blockMap[code].rooms[grp])blockMap[code].rooms[grp]=0;
+    blockMap[code].rooms[grp]+=rms;
+  });
+  let blocks=Object.values(blockMap).filter(b=>!search||(b.name.toLowerCase().includes(search)||b.code.toLowerCase().includes(search)));
+  blocks.sort((a,b)=>b.totalNights-a.totalNights);
+  if(!blocks.length){document.getElementById('grt-block-tbl').innerHTML='<div class="empty">No data.</div>';return;}
+  const gColors={'King':'#378ADD','Queen':'#639922','Suite':'#EF9F27','Other':'#888780'};
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Block</th><th>Total nights</th><th>King</th><th>Queen</th><th>Suite</th><th>Other</th><th>Revenue</th><th>Mix</th></tr></thead><tbody>';
+  blocks.forEach(b=>{
+    const tot=b.totalNights||1;
+    const kPct=Math.round((b.rooms.King||0)/tot*100);
+    const qPct=Math.round((b.rooms.Queen||0)/tot*100);
+    const sPct=Math.round((b.rooms.Suite||0)/tot*100);
+    const oPct=Math.round((b.rooms.Other||0)/tot*100);
+    const bar=`<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;min-width:80px">
+      ${kPct>0?`<div style="width:${kPct}%;background:#378ADD"></div>`:''}
+      ${qPct>0?`<div style="width:${qPct}%;background:#639922"></div>`:''}
+      ${sPct>0?`<div style="width:${sPct}%;background:#EF9F27"></div>`:''}
+      ${oPct>0?`<div style="width:${oPct}%;background:#888780"></div>`:''}
+    </div>`;
+    html+=`<tr>
+      <td style="padding:9px 14px"><div style="font-weight:600">${b.name}</div><div style="font-size:11px;color:var(--text2)">${b.code}</div></td>
+      <td style="font-weight:600">${b.totalNights.toLocaleString()}</td>
+      <td style="color:#378ADD;font-weight:${b.rooms.King?'600':'400'}">${b.rooms.King||'—'}</td>
+      <td style="color:#639922;font-weight:${b.rooms.Queen?'600':'400'}">${b.rooms.Queen||'—'}</td>
+      <td style="color:#EF9F27;font-weight:${b.rooms.Suite?'600':'400'}">${b.rooms.Suite||'—'}</td>
+      <td style="color:#888780">${b.rooms.Other||'—'}</td>
+      <td style="font-weight:700;color:var(--green)">${b.totalRev>0?fmt(b.totalRev):'—'}</td>
+      <td>${bar}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('grt-block-tbl').innerHTML=html;
+}
+
+function renderGrtByMonth(){
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Month</th><th>Total nights</th><th>King</th><th>Queen</th><th>Suite</th><th>Other</th><th>Revenue</th><th>Avg rate</th></tr></thead><tbody>';
+  let hasData=false;
+  MONTHS.forEach(mo=>{
+    const rows=allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r));
+    const tot=rows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    if(!tot)return;
+    hasData=true;
+    const rev=rows.reduce((s,r)=>s+biCalcRev(r),0);
+    const adr=tot>0?rev/tot:null;
+    const grpNights=g=>rows.filter(r=>roomGroup(r['Room Type'])===g).reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
+    html+=`<tr>
+      <td style="padding:9px 14px;font-weight:600">${moLabel(mo)}</td>
+      <td style="font-weight:600">${tot.toLocaleString()}</td>
+      <td style="color:#378ADD;font-weight:600">${grpNights('King')||'—'}</td>
+      <td style="color:#639922;font-weight:600">${grpNights('Queen')||'—'}</td>
+      <td style="color:#EF9F27;font-weight:600">${grpNights('Suite')||'—'}</td>
+      <td style="color:#888780">${grpNights('Other')||'—'}</td>
+      <td style="font-weight:700;color:var(--green)">${rev>0?fmt(rev):'—'}</td>
+      <td>${adr!=null?fmt(adr):'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('grt-month-tbl').innerHTML=hasData?html:'<div class="empty">No monthly group room type data.</div>';
+}
+
+function renderGrtRate(){
+  const codeMap={};
+  allBi.filter(r=>biHasRooms(r)).forEach(r=>{
+    const code=r['Room Type']||'Unknown'; const grp=roomGroup(code);
+    const rate=biRate(r); const rms=n(r['Rooms Picked Up'])||0;
+    if(!codeMap[code])codeMap[code]={code,grp,nights:0,rateSum:0,count:0};
+    codeMap[code].nights+=rms;
+    if(rate&&rms>0){codeMap[code].rateSum+=rate*rms;codeMap[code].count+=rms;}
+  });
+  const codes=Object.values(codeMap).filter(c=>c.count>0).sort((a,b)=>(b.rateSum/b.count)-(a.rateSum/a.count));
+  const gColors={'King':'#378ADD','Queen':'#639922','Suite':'#EF9F27','Other':'#888780'};
+
+  if(charts.grtRate)charts.grtRate.destroy();
+  charts.grtRate=new Chart(document.getElementById('grtRateChart'),{
+    type:'bar',
+    data:{labels:codes.map(c=>c.code),datasets:[{label:'Avg Rate',data:codes.map(c=>Math.round(c.rateSum/c.count)),backgroundColor:codes.map(c=>gColors[c.grp]||'#888'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  let tbl='<table class="tbl"><thead><tr><th>Room Code</th><th>Group</th><th>Nights</th><th>Avg Rate</th></tr></thead><tbody>';
+  codes.forEach(c=>{
+    tbl+=`<tr><td style="font-weight:600">${c.code}</td>
+      <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${gColors[c.grp]||'#888'};margin-right:5px;vertical-align:middle"></span>${c.grp}</td>
+      <td>${c.nights.toLocaleString()}</td>
+      <td style="font-weight:700">${fmt(c.rateSum/c.count)}</td></tr>`;
+  });
+  tbl+='</tbody></table>';
+  document.getElementById('grt-rate-tbl').innerHTML=tbl;
+}
+
+// ── ROOM MIX DEEP DIVE ────────────────────────────────────────────────────────
+// Source: Room Type Raw (all reservations) + Block Info Raw (group portion)
+let rtdCurrentTab='overview';
+function rtdTab(tab,btn){
+  rtdCurrentTab=tab;
+  document.querySelectorAll('#page-roomtype-dive .ftab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  ['overview','trend','grpvtrn','detail'].forEach(p=>{
+    document.getElementById('rtdpanel-'+p).style.display=tab===p?'':'none';
+  });
+  if(tab==='trend')   renderRtdTrend();
+  if(tab==='grpvtrn') renderRtdGvT();
+  if(tab==='detail')  renderRtdDetail();
+}
+
+function renderRoomTypeDive(){
+  if(!allRt.length){
+    document.getElementById('rtd-kpis').innerHTML='<div class="empty" style="grid-column:1/-1">No Room Type Raw data. Check the Room Type Raw tab exists in Data Hub.</div>';
+    return;
+  }
+  const today=getToday();
+  const rtYTD=allRt.filter(r=>r['Date']&&r['Date']<=today);
+  const totalSold=rtYTD.reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0);
+  const totalRev=rtYTD.reduce((s,r)=>s+(n(r['Revenue'])||0),0);
+  const kSold=rtYTD.filter(r=>r['Room Group']==='King').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0);
+  const qSold=rtYTD.filter(r=>r['Room Group']==='Queen').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0);
+  const sSold=rtYTD.filter(r=>r['Room Group']==='Suite').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0);
+  const kRev=rtYTD.filter(r=>r['Room Group']==='King').reduce((s,r)=>s+(n(r['Revenue'])||0),0);
+  const qRev=rtYTD.filter(r=>r['Room Group']==='Queen').reduce((s,r)=>s+(n(r['Revenue'])||0),0);
+  const overallADR=totalSold>0?totalRev/totalSold:null;
+
+  document.getElementById('rtd-kpis').innerHTML=`
+    <div class="mc"><div class="mc-label">Total rooms sold YTD</div><div class="mc-val">${totalSold.toLocaleString()}</div><div class="mc-sub">all room types</div></div>
+    <div class="mc"><div class="mc-label">King rooms sold</div><div class="mc-val" style="color:var(--chart-blue)">${kSold.toLocaleString()}</div><div class="mc-sub">${totalSold>0?Math.round(kSold/totalSold*100):'—'}% of total</div></div>
+    <div class="mc"><div class="mc-label">Queen rooms sold</div><div class="mc-val" style="color:var(--chart-green)">${qSold.toLocaleString()}</div><div class="mc-sub">${totalSold>0?Math.round(qSold/totalSold*100):'—'}% of total</div></div>
+    <div class="mc"><div class="mc-label">Suite rooms sold</div><div class="mc-val" style="color:var(--chart-amber)">${sSold.toLocaleString()}</div><div class="mc-sub">${totalSold>0?Math.round(sSold/totalSold*100):'—'}% of total</div></div>
+    <div class="mc"><div class="mc-label">Overall ADR YTD</div><div class="mc-val">${overallADR!=null?fmt(overallADR):'—'}</div></div>
+    <div class="mc"><div class="mc-label">King revenue</div><div class="mc-val">${fmtK(kRev)}</div><div class="mc-sub">vs Queen ${fmtK(qRev)}</div></div>`;
+
+  renderRtdOverview(rtYTD,totalSold,totalRev);
+  if(rtdCurrentTab==='trend')   renderRtdTrend();
+  if(rtdCurrentTab==='grpvtrn') renderRtdGvT();
+  if(rtdCurrentTab==='detail')  renderRtdDetail();
+}
+
+function renderRtdOverview(rtYTD,totalSold,totalRev){
+  const groups=['King','Queen','Suite','Other'];
+  const gColors=['#378ADD','#639922','#EF9F27','#888780'];
+  const gSold=groups.map(g=>rtYTD.filter(r=>r['Room Group']===g).reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const gRev=groups.map(g=>rtYTD.filter(r=>r['Room Group']===g).reduce((s,r)=>s+(n(r['Revenue'])||0),0));
+
+  if(charts.rtdPie)charts.rtdPie.destroy();
+  charts.rtdPie=new Chart(document.getElementById('rtdPieChart'),{
+    type:'doughnut',data:{labels:groups,datasets:[{data:gSold,backgroundColor:gColors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toLocaleString()+' ('+(totalSold>0?Math.round(c.parsed/totalSold*100):0)+'%)'}}}}
+  });
+  if(charts.rtdRev)charts.rtdRev.destroy();
+  charts.rtdRev=new Chart(document.getElementById('rtdRevChart'),{
+    type:'bar',data:{labels:groups,datasets:[{label:'Revenue',data:gRev.map(v=>Math.round(v)),backgroundColor:gColors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:11},color:'#888780'},grid:{display:false}},y:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  // Summary table by room code
+  const codeMap={};
+  rtYTD.forEach(r=>{
+    const code=r['Room Code']||'Unknown'; const grp=r['Room Group']||'Other';
+    const sold=n(r['Rooms Sold'])||0; const rev=n(r['Revenue'])||0;
+    const inv=n(r['Inventory'])||0;
+    if(!codeMap[code])codeMap[code]={code,grp,sold:0,rev:0,inv:inv};
+    codeMap[code].sold+=sold; codeMap[code].rev+=rev;
+  });
+  const codes=Object.values(codeMap).sort((a,b)=>b.sold-a.sold);
+  const gColors2={'King':'#378ADD','Queen':'#639922','Suite':'#EF9F27','Other':'#888780'};
+  let tbl='<table class="tbl"><thead><tr><th>Room Code</th><th>Room Group</th><th>Inventory</th><th>Rooms Sold YTD</th><th>Share</th><th>Revenue YTD</th><th>ADR</th></tr></thead><tbody>';
+  codes.forEach(c=>{
+    const adr=c.sold>0?c.rev/c.sold:null;
+    const pct=totalSold>0?Math.round(c.sold/totalSold*100):0;
+    tbl+=`<tr>
+      <td style="font-weight:600">${c.code}</td>
+      <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${gColors2[c.grp]||'#888'};margin-right:5px;vertical-align:middle"></span>${c.grp}</td>
+      <td style="color:var(--text2)">${c.inv>0?c.inv:'—'}</td>
+      <td style="font-weight:600">${c.sold.toLocaleString()}</td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${gColors2[c.grp]||'#888'}"></div></div><span style="font-size:12px;font-weight:600;min-width:28px;text-align:right">${pct}%</span></div></td>
+      <td style="font-weight:700;color:var(--green)">${c.rev>0?fmt(c.rev):'—'}</td>
+      <td>${adr!=null?fmt(adr):'—'}</td>
+    </tr>`;
+  });
+  tbl+='</tbody></table>';
+  document.getElementById('rtd-summary-tbl').innerHTML=tbl;
+}
+
+function renderRtdTrend(){
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const mK=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='King').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const mQ=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='Queen').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const mS=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='Suite').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const kRev=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='King').reduce((s,r)=>s+(n(r['Revenue'])||0),0));
+  const qRev=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='Queen').reduce((s,r)=>s+(n(r['Revenue'])||0),0));
+  const kADR=MONTHS.map((mo,i)=>mK[i]>0?kRev[i]/mK[i]:null);
+  const qADR=MONTHS.map((mo,i)=>mQ[i]>0?qRev[i]/mQ[i]:null);
+
+  if(charts.rtdTrend)charts.rtdTrend.destroy();
+  charts.rtdTrend=new Chart(document.getElementById('rtdTrendChart'),{
+    type:'bar',data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'King',data:mK,backgroundColor:'#378ADD',borderRadius:2},
+      {label:'Queen',data:mQ,backgroundColor:'#639922',borderRadius:2},
+      {label:'Suite',data:mS,backgroundColor:'#EF9F27',borderRadius:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+  if(charts.rtdAdr)charts.rtdAdr.destroy();
+  charts.rtdAdr=new Chart(document.getElementById('rtdAdrChart'),{
+    type:'line',data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'King ADR',data:kADR.map(v=>v?Math.round(v):null),borderColor:'#378ADD',borderWidth:2,pointRadius:3,fill:false,tension:0.3},
+      {label:'Queen ADR',data:qADR.map(v=>v?Math.round(v):null),borderColor:'#639922',borderWidth:2,pointRadius:3,fill:false,tension:0.3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+}
+
+function renderRtdGvT(){
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  // Group nights by month + room group from Block Info Raw
+  const grpK=MONTHS.map(mo=>allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r)&&roomGroup(r['Room Type'])==='King').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  const grpQ=MONTHS.map(mo=>allBi.filter(r=>r['Stay Date']&&r['Stay Date'].startsWith(mo)&&biHasRooms(r)&&roomGroup(r['Room Type'])==='Queen').reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0));
+  const totK=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='King').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const totQ=MONTHS.map(mo=>allRt.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Room Group']==='Queen').reduce((s,r)=>s+(n(r['Rooms Sold'])||0),0));
+  const trnK=MONTHS.map((mo,i)=>Math.max(totK[i]-grpK[i],0));
+  const trnQ=MONTHS.map((mo,i)=>Math.max(totQ[i]-grpQ[i],0));
+
+  if(charts.rtdKing)charts.rtdKing.destroy();
+  charts.rtdKing=new Chart(document.getElementById('rtdKingChart'),{
+    type:'bar',data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'Group King',data:grpK,backgroundColor:'#378ADD',borderRadius:2},
+      {label:'Transient King',data:trnK,backgroundColor:'rgba(55,138,221,0.3)',borderRadius:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+  if(charts.rtdQueen)charts.rtdQueen.destroy();
+  charts.rtdQueen=new Chart(document.getElementById('rtdQueenChart'),{
+    type:'bar',data:{labels:MONTHS.map(m=>moLabel(m)),datasets:[
+      {label:'Group Queen',data:grpQ,backgroundColor:'#639922',borderRadius:2},
+      {label:'Transient Queen',data:trnQ,backgroundColor:'rgba(99,153,34,0.3)',borderRadius:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+
+  let html='<table class="tbl"><thead><tr><th>Month</th><th>Total King sold</th><th>Group King</th><th>Transient King</th><th>Total Queen sold</th><th>Group Queen</th><th>Transient Queen</th></tr></thead><tbody>';
+  MONTHS.forEach((mo,i)=>{
+    if(!totK[i]&&!totQ[i])return;
+    html+=`<tr>
+      <td style="font-weight:600">${moLabel(mo)}</td>
+      <td>${totK[i]||'—'}</td>
+      <td style="color:#378ADD;font-weight:600">${grpK[i]||'—'}</td>
+      <td style="color:rgba(55,138,221,0.8)">${trnK[i]||'—'}</td>
+      <td>${totQ[i]||'—'}</td>
+      <td style="color:#639922;font-weight:600">${grpQ[i]||'—'}</td>
+      <td style="color:rgba(99,153,34,0.8)">${trnQ[i]||'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('rtd-gvt-tbl').innerHTML=html;
+}
+
+function renderRtdDetail(){
+  const moF=document.getElementById('rtd-month-filter')?.value||'all';
+  const grpF=document.getElementById('rtd-group-filter')?.value||'all';
+  let rows=allRt.filter(r=>{
+    if(moF!=='all'&&!(r['Date']&&r['Date'].startsWith(moF)))return false;
+    if(grpF!=='all'&&r['Room Group']!==grpF)return false;
+    return n(r['Rooms Sold'])>0;
+  });
+  // Group by Room Code + Month
+  const codeMonthMap={};
+  rows.forEach(r=>{
+    const mo=r['Date']?r['Date'].slice(0,7):'?';
+    const key=`${r['Room Code']}||${mo}`;
+    if(!codeMonthMap[key])codeMonthMap[key]={code:r['Room Code'],grp:r['Room Group'],mo,sold:0,rev:0};
+    codeMonthMap[key].sold+=(n(r['Rooms Sold'])||0);
+    codeMonthMap[key].rev+=(n(r['Revenue'])||0);
+  });
+  const entries=Object.values(codeMonthMap).sort((a,b)=>a.mo.localeCompare(b.mo)||b.sold-a.sold);
+  if(!entries.length){document.getElementById('rtd-detail-tbl').innerHTML='<div class="empty">No data for this filter.</div>';return;}
+  const gColors={'King':'#378ADD','Queen':'#639922','Suite':'#EF9F27','Other':'#888780'};
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Room Code</th><th>Group</th><th>Month</th><th>Rooms Sold</th><th>Revenue</th><th>ADR</th></tr></thead><tbody>';
+  entries.forEach(e=>{
+    const adr=e.sold>0?e.rev/e.sold:null;
+    html+=`<tr>
+      <td style="padding:9px 14px;font-weight:600">${e.code}</td>
+      <td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${gColors[e.grp]||'#888'};margin-right:5px;vertical-align:middle"></span>${e.grp}</td>
+      <td>${moLabel(e.mo)}</td>
+      <td style="font-weight:600">${e.sold.toLocaleString()}</td>
+      <td style="font-weight:600;color:var(--green)">${e.rev>0?fmt(e.rev):'—'}</td>
+      <td>${adr!=null?fmt(adr):'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('rtd-detail-tbl').innerHTML=html;
 }
 
 loadAll();
