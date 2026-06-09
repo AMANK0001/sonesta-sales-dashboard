@@ -1746,23 +1746,36 @@ function renderGroupsCal(){
   const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
     const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
     const dayBlocks=byDate[dateStr]||[];
-    const activeBlocks=dayBlocks.filter(b=>b.hasRooms);
     if(!dayBlocks.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')"><div class="cal-day-num">${dayNumHtml}</div></div>`;
+
+    const activeBlocks=dayBlocks.filter(b=>b.hasRooms);
+    const ghostBlocks=dayBlocks.filter(b=>!b.hasRooms); // in Block Info Raw but 0 rooms tonight
     const totalRooms=activeBlocks.reduce((s,b)=>s+b.rooms,0);
     const totalRev=activeBlocks.reduce((s,b)=>s+b.revenue,0);
-    const pickups=dayBlocks.map(b=>b.pickupPct).filter(v=>v!=null);
-    // de-dupe pickup pcts (one per block)
-    const uniquePickups=[...new Map(dayBlocks.map(b=>[b.blockCode,b.pickupPct])).values()].filter(v=>v!=null);
+    const blockCount=new Set(dayBlocks.map(b=>b.blockCode)).size;
+    const hasRisk=activeBlocks.some(b=>b.atRisk);
+
+    // If NO active rooms tonight → subtle neutral cell, just show block names dimmed
+    if(!activeBlocks.length){
+      const names=[...new Set(ghostBlocks.map(b=>b.blockName||b.blockCode))];
+      return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')" style="opacity:0.7">
+        <div class="cal-day-num">${dayNumHtml}</div>
+        <div class="cal-info" style="color:var(--text3);font-size:10px">${blockCount} block${blockCount>1?'s':''} · 0 rooms</div>
+        ${names.slice(0,2).map(nm=>`<div style="font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div>`).join('')}
+        ${names.length>2?`<div style="font-size:9px;color:var(--text3)">+${names.length-2} more</div>`:''}
+      </div>`;
+    }
+
+    // Active rooms tonight → color by pickup as before
+    const uniquePickups=[...new Map(activeBlocks.map(b=>[b.blockCode,b.pickupPct])).values()].filter(v=>v!=null);
     const avgPickup=uniquePickups.length?uniquePickups.reduce((s,v)=>s+v,0)/uniquePickups.length:null;
-    const hasRisk=dayBlocks.some(b=>b.atRisk);
     let colorClass='gray-cell';
     if(avgPickup!=null){if(avgPickup>=70)colorClass='green-cell';else if(avgPickup>=50)colorClass='yellow-cell';else colorClass='red-cell';}
     const fillColor=avgPickup>=70?'#639922':avgPickup>=50?'#EF9F27':'#E24B4A';
     const pctClass=avgPickup>=70?'green':avgPickup>=50?'amber':'red';
-    const blockCount=new Set(dayBlocks.map(b=>b.blockCode)).size;
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')">
       <div class="cal-day-num">${dayNumHtml}</div>
-      <div class="cal-info bold">${blockCount} group${blockCount>1?'s':''} ${hasRisk?'⚠':''}</div>
+      <div class="cal-info bold">${activeBlocks.length} group${activeBlocks.length>1?'s':''} ${hasRisk?'⚠':''}</div>
       <div class="cal-info">${totalRooms} rooms · ${fmtK(totalRev)}</div>
       <div class="cal-bar-wrap">
         ${avgPickup!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(avgPickup,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${Math.round(avgPickup)}% pickup</div>`:''}
@@ -1780,24 +1793,29 @@ function openGroupDayBI(dateStr){
     const pipeBlocks=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
     if(!pipeBlocks.length){openModal(label,'<div class="empty">No group data for this night.</div>');return;}
   }
-  // Only show blocks with rooms > 0 tonight
-  const dayBlocks=aggregateBiByBlockNight(rawRows).filter(e=>e.rooms>0);
 
-  if(!dayBlocks.length){
-    openModal(label,'<div class="empty">No group rooms on property tonight.</div>');
-    return;
+  const allAgg=aggregateBiByBlockNight(rawRows);
+  const activeBlocks=allAgg.filter(e=>e.rooms>0);   // rooms on property tonight
+  const ghostBlocks=allAgg.filter(e=>e.rooms===0);   // in block info but 0 rooms tonight
+
+  const totalRooms=activeBlocks.reduce((s,e)=>s+e.rooms,0);
+  const totalRev=activeBlocks.reduce((s,e)=>s+e.rev,0);
+
+  let body='';
+
+  // Summary strip — only count active blocks
+  if(activeBlocks.length){
+    body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
+      <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${activeBlocks.length}</div></div>
+    </div>`;
+  } else {
+    body+=`<div style="padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;font-size:13px;color:var(--text2)">No rooms picked up tonight — ${ghostBlocks.length} block${ghostBlocks.length>1?'s':''} in block info with 0 rooms.</div>`;
   }
 
-  const totalRooms=dayBlocks.reduce((s,e)=>s+e.rooms,0);
-  const totalRev=dayBlocks.reduce((s,e)=>s+e.rev,0);
-
-  let body=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
-    <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${dayBlocks.length}</div></div>
-  </div>`;
-
-  dayBlocks.forEach(e=>{
+  // Active blocks — full detail cards
+  activeBlocks.forEach(e=>{
     const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
     const p=pipe?n(pipe['Pickup %']):null;
     const currentBlock=pipe?n(pipe['Current Block']):null;
@@ -1818,6 +1836,32 @@ function openGroupDayBI(dateStr){
       ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}</span></div>`:''}
     </div>`;
   });
+
+  // Ghost blocks — compact dimmed rows
+  if(ghostBlocks.length){
+    body+=`<div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Also in block file — 0 rooms tonight</div>`;
+    ghostBlocks.forEach(e=>{
+      const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
+      const p=pipe?n(pipe['Pickup %']):null;
+      const currentBlock=pipe?n(pipe['Current Block']):null;
+      const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
+      body+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--border);opacity:0.55;font-size:12px">
+        <div>
+          <span style="font-weight:600">${pipe?pipe['Block Name']:e.blockCode}</span>
+          <span style="color:var(--text3);margin-left:8px">${e.blockCode}</span>
+        </div>
+        <div style="display:flex;gap:12px;color:var(--text2);font-size:11px">
+          ${pipe?`<span>${pipe['Status']}</span>`:''}
+          ${currentBlock!=null?`<span>Block: ${currentBlock}</span>`:''}
+          ${pickedUpTotal!=null?`<span>Picked up: ${pickedUpTotal}</span>`:''}
+          ${p!=null?`<span>${Math.round(p)}% pickup</span>`:''}
+        </div>
+      </div>`;
+    });
+    body+='</div>';
+  }
+
   openModal(label,body);
 }
 
