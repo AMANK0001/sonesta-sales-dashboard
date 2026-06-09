@@ -476,15 +476,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         <option value="30" selected>30 days</option>
         <option value="60">60 days</option>
         <option value="90">90 days</option>
+        <option value="999">All available</option>
       </select>
     </div>
   </div>
 
   <!-- Pricing Guide -->
   <div id="crpanel-pricing">
-    <div class="alert alert-blue" style="margin-bottom:1rem;background:var(--blue-bg);color:var(--blue)">
+    <div class="alert alert-blue" style="margin-bottom:.75rem;background:var(--blue-bg);color:var(--blue)">
       <i class="ti ti-info-circle"></i>
       <span>Comp set: Hilton Garden Inn · Hampton Inn · Home2 Hilton · Fairfield Inn · Residence Inn · Best Western. Rates from Amadeus Rev360 via Expedia. Blank = closed or no data.</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.75rem;align-items:center">
+      <span style="font-size:11px;color:var(--text2)">Filter signal:</span>
+      <select id="cr-signal-filter" onchange="renderCompPricingGuide(crFwdRows)" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <option value="all">All signals</option>
+        <option value="push">↑ Push rate opportunity</option>
+        <option value="lower">↓ Consider lowering</option>
+        <option value="above">↑ Well above avg</option>
+        <option value="below">⚠ Significantly below avg</option>
+        <option value="ok">✓ Competitive</option>
+        <option value="closed">All comps closed</option>
+      </select>
+      <span style="font-size:11px;color:var(--text2);margin-left:8px">Your occ%:</span>
+      <select id="cr-occ-filter" onchange="renderCompPricingGuide(crFwdRows)" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <option value="all">All</option>
+        <option value="high">High ≥80%</option>
+        <option value="mid">Mid 50–79%</option>
+        <option value="low">Low &lt;50%</option>
+        <option value="nodata">No occ data</option>
+      </select>
     </div>
     <div id="cr-pricing-tbl"></div>
   </div>
@@ -582,9 +603,20 @@ function toRows(vals){
   return vals.slice(1).filter(row=>row.some(c=>c&&c.trim())).map(row=>{const o={};h.forEach((k,i)=>o[k]=(row[i]||'').trim());return o;});
 }
 function n(v){ if(v==null||v==='')return null; const s=String(v).replace(/[$,%]/g,'').replace(/,/g,'').trim(); const x=parseFloat(s); return isNaN(x)?null:x; }
-// Revenue for a Block Info row = Rooms Picked Up × Avg Rate (only when rooms > 0)
-// Night Revenue column from Opera is ignored — it includes 0-room rows with committed revenue
-function biCalcRev(r){ const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); if(!rooms||rooms<=0||!rate)return 0; return rooms*rate; }
+// Revenue for a Block Info row:
+// Primary: Rooms Picked Up × Avg Rate (only when rooms > 0 and rate exists)
+// Fallback for past dates with no rate: use Night Revenue from Opera directly
+function biCalcRev(r){
+  const rooms=n(r['Rooms Picked Up']);
+  const rate=n(r['Avg Rate']);
+  if(rooms&&rooms>0&&rate&&rate>0) return rooms*rate;
+  // Fallback: if arrival has passed and we have Night Revenue, use it
+  const today=getToday();
+  const stayDate=r['Stay Date']||'';
+  const nightRev=n(r['Night Revenue']);
+  if(stayDate && stayDate < today && nightRev && nightRev>0) return nightRev;
+  return 0;
+}
 function biHasRooms(r){ return (n(r['Rooms Picked Up'])||0)>0; }
 function fmt(v){ if(v==null)return'—'; return'$'+Math.round(v).toLocaleString('en-US'); }
 function fmtK(v){ if(v==null)return'—'; if(Math.abs(v)>=1000000) return'$'+(v/1000000).toFixed(1)+'M'; if(Math.abs(v)>=1000) return'$'+(v/1000).toFixed(1)+'k'; return'$'+Math.round(v).toLocaleString(); }
@@ -600,11 +632,13 @@ function effectiveStatus(r){
   if(r['Status']==='CAN'||r['Status']==='LOS') return 'LOS';
   const arrival=r['Arrival']||'';
   const dtc=n(r['Days to Cutoff']);
+  const pickedUp=n(r['Rooms Picked Up'])||0;
+  // 0 rooms picked up + arrival passed → DIED (regardless of ACT/DEF/TEN status)
+  if(arrival && arrival < today && pickedUp===0) return 'DIED';
+  // ACT = completed stay (has rooms)
   if(r['Status']==='ACT') return 'COMPLETED';
-  // Arrival past + cutoff past → completed
+  // Arrival past + cutoff past + has rooms → completed
   if(arrival && arrival < today && dtc!=null && dtc<0) return 'COMPLETED';
-  // 0 rooms picked up + arrival has passed → died/no-show
-  if(arrival && arrival < today && (n(r['Rooms Picked Up'])||0)===0) return 'DIED';
   return r['Status'];
 }
 
@@ -1517,33 +1551,41 @@ function renderGroupsCal(){
 }
 
 function openGroupDayBI(dateStr){
-  // Source: Block Info Raw for this Stay Date, enriched with Group Pipeline data
   const d=new Date(dateStr+'T12:00:00');
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const dayBlocks=allBi.filter(r=>r['Stay Date']===dateStr);
   if(!dayBlocks.length){
-    // Fallback: check pipeline arrival date (legacy)
     const pipeBlocks=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
     if(!pipeBlocks.length){openModal(label,'<div class="empty">No group data for this night.</div>');return;}
   }
   let body='';
   const totalRooms=dayBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
   const totalRev=dayBlocks.reduce((s,r)=>s+biCalcRev(r),0);
+  // Total current block across all blocks on property tonight
+  const totalCurrentBlock=dayBlocks.reduce((s,r)=>{
+    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+    return s+(pipe?n(pipe['Current Block'])||0:0);
+  },0);
   body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
-    <div><div style="font-size:11px;color:var(--text2)">Total rooms this night</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Night revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Current block total</div><div style="font-size:20px;font-weight:700">${totalCurrentBlock||'—'}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
     <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${dayBlocks.length}</div></div>
   </div>`;
   dayBlocks.forEach(r=>{
     const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
     const p=pipe?n(pipe['Pickup %']):null;
     const rooms=n(r['Rooms Picked Up']); const rate=n(r['Avg Rate']); const calcRev=biCalcRev(r);
+    const currentBlock=pipe?n(pipe['Current Block']):null;
+    const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
     body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
       <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:r['Block Code']}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
       <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${r['Block Code']||'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${rooms!=null?rooms:'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Total picked up (block)</span><span class="modal-kv-val" style="font-weight:600">${pickedUpTotal!=null?pickedUpTotal:'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Current block size</span><span class="modal-kv-val">${currentBlock!=null?currentBlock:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:${calcRev>0?'var(--green)':'var(--text2)'}">${calcRev>0?fmt(calcRev):(rooms===0?'0 rooms':'—')}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Rate</span><span class="modal-kv-val">${fmt(rate)}</span></div>
       ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
@@ -1809,45 +1851,79 @@ function renderCompRatesKPIs(todayRow,todayCS,myBar,csOcc,fwdAvg,days){
     <div class="mc"><div class="mc-label">CS avg next ${days}d</div><div class="mc-val">${fwdAvg!=null?fmt(fwdAvg):'—'}</div><div class="mc-sub">forward-looking avg</div></div>`;
 }
 
+function getSignal(cs, myBar, myOcc){
+  if(cs.open===0) return {key:'closed', label:'All comps closed', color:'var(--text3)', bg:'var(--bg2)'};
+  if(myBar==null) return {key:'nobar', label:'No BAR data', color:'var(--text3)', bg:'var(--bg2)'};
+  const diff=myBar-cs.avg;
+  const aboveMin=cs.min!=null?myBar-cs.min:null;
+  // High occ + not already well above → push
+  if(myOcc!=null && myOcc>=80 && diff<25)
+    return {key:'push', label:'↑ Push rate — high occ', color:'var(--green)', bg:'var(--green-bg)'};
+  // High occ + already above → hold or nudge more
+  if(myOcc!=null && myOcc>=80 && diff>=25)
+    return {key:'push', label:'↑ Strong position — consider nudging higher', color:'var(--green)', bg:'var(--green-bg)'};
+  // Low occ + above cheapest comp
+  if(myOcc!=null && myOcc<55 && aboveMin!=null && aboveMin>15)
+    return {key:'lower', label:'↓ Low occ, above cheapest comp', color:'var(--amber)', bg:'var(--amber-bg)'};
+  // Low occ + below avg — urgent review
+  if(myOcc!=null && myOcc<55 && diff<-15)
+    return {key:'below', label:'⚠ Low occ + below comp avg', color:'var(--red)', bg:'var(--red-bg)'};
+  // Well above regardless of occ
+  if(diff>35) return {key:'above', label:'↑ Well above comp avg', color:'var(--blue)', bg:'var(--blue-bg)'};
+  // Significantly below regardless of occ
+  if(diff<-25) return {key:'below', label:'⚠ Significantly below comp avg', color:'var(--red)', bg:'var(--red-bg)'};
+  return {key:'ok', label:'✓ Competitive', color:'var(--chart-green)', bg:'transparent'};
+}
+
 function renderCompPricingGuide(rows){
   const today=getToday();
-  if(!rows.length){document.getElementById('cr-pricing-tbl').innerHTML='<div class="empty">No rate data available for this period.</div>';return;}
+  const signalFilter=document.getElementById('cr-signal-filter')?.value||'all';
+  const occFilter=document.getElementById('cr-occ-filter')?.value||'all';
+  if(!rows||!rows.length){document.getElementById('cr-pricing-tbl').innerHTML='<div class="empty">No rate data available for this period.</div>';return;}
 
-  let html='<div style="display:flex;flex-direction:column;gap:6px">';
-  // Group by week for readability
-  rows.forEach(row=>{
+  let filtered=rows.filter(row=>{
+    const cs=calcCSRates(row);
+    const fc=allFc.find(r=>r['Date']===row['Date']);
+    const myBar=fc?n(fc['BAR']):null;
+    const myOcc=fc?fixOcc(n(fc['Occ%'])):null;
+    const sig=getSignal(cs,myBar,myOcc);
+    // Signal filter
+    if(signalFilter!=='all'&&sig.key!==signalFilter) return false;
+    // Occ filter
+    if(occFilter==='high'&&(myOcc==null||myOcc<80)) return false;
+    if(occFilter==='mid'&&(myOcc==null||myOcc<50||myOcc>=80)) return false;
+    if(occFilter==='low'&&(myOcc==null||myOcc>=50)) return false;
+    if(occFilter==='nodata'&&myOcc!=null) return false;
+    return true;
+  });
+
+  if(!filtered.length){document.getElementById('cr-pricing-tbl').innerHTML='<div class="empty">No days match this filter.</div>';return;}
+
+  let html='<div style="display:flex;flex-direction:column;gap:5px">';
+  filtered.forEach(row=>{
     const cs=calcCSRates(row);
     const fc=allFc.find(r=>r['Date']===row['Date']);
     const myBar=fc?n(fc['BAR']):null;
     const myOcc=fc?fixOcc(n(fc['Occ%'])):null;
     const csOcc=n(row['CS Occ%']);
     const diff=myBar!=null&&cs.avg!=null?myBar-cs.avg:null;
-
-    // Pricing signal
-    let signal=''; let sigColor='var(--text3)'; let sigBg='var(--bg2)';
-    if(cs.open===0){signal='All comps closed';sigColor='var(--text3)';}
-    else if(diff!=null){
-      if(myOcc!=null&&myOcc>=85&&diff<20){signal='↑ Opportunity to push rate';sigColor='var(--green)';sigBg='var(--green-bg)';}
-      else if(myBar!=null&&cs.min!=null&&myBar>cs.min*1.15&&(myOcc==null||myOcc<60)){signal='↓ Consider lowering — above cheapest comp';sigColor='var(--amber)';sigBg='var(--amber-bg)';}
-      else if(diff>30){signal='↑ Well above comp avg';sigColor='var(--blue)';sigBg='var(--blue-bg)';}
-      else if(diff<-20){signal='⚠ Significantly below comp avg';sigColor='var(--red)';sigBg='var(--red-bg)';}
-      else{signal='✓ Competitive';sigColor='var(--chart-green)';}
-    }
-
+    const sig=getSignal(cs,myBar,myOcc);
     const isWeekend=['Fri','Sat','Sun'].includes(row['Day']||'');
     const ev=allEv.find(e=>e['Date']===row['Date']);
     const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']);
-    const evTag=hasEvent?`<span style="font-size:11px">🏟</span>`:'';
+    const evTag=hasEvent?` 🏟`:'';
     const wkTag=isWeekend?`<span class="badge b-blue" style="font-size:10px;padding:1px 6px">WKD</span>`:'';
+    const diffStr=diff!=null?`<span style="font-size:10px;color:${diff>0?'var(--chart-green)':diff<0?'var(--red)':'var(--text3)'}">${diff>0?'+':''}${Math.round(diff)}</span>`:'';
 
-    html+=`<div style="display:grid;grid-template-columns:90px 60px 80px 90px 100px 80px 1fr;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--bg);font-size:12px">
-      <div><div style="font-weight:600">${row['Date']?row['Date'].slice(5):''}</div><div style="font-size:11px;color:var(--text2)">${row['Day']||''} ${evTag}</div></div>
+    html+=`<div style="display:grid;grid-template-columns:100px 55px 70px 80px 110px 75px 70px 1fr;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--bg);font-size:12px${isWeekend?';border-left:3px solid var(--chart-blue)':''}${hasEvent?';border-left:3px solid var(--chart-amber)':''}">
+      <div><div style="font-weight:600">${row['Date']?row['Date'].slice(5):''}${evTag}</div><div style="font-size:10px;color:var(--text2)">${row['Day']||''}</div></div>
       <div>${wkTag}</div>
-      <div><div style="font-size:11px;color:var(--text2)">CS Occ</div><div style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text2)">CS Avg</div><div style="font-weight:600">${cs.avg!=null?fmt(cs.avg):'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text2)">CS Min–Max</div><div style="font-weight:500;font-size:11px">${cs.min!=null?fmt(cs.min)+' – '+fmt(cs.max):'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--text2)">Your BAR</div><div style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-10?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</div></div>
-      <div><span style="background:${sigBg};color:${sigColor};padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">${signal||'—'}</span></div>
+      <div><div style="font-size:10px;color:var(--text2)">CS Occ</div><div style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">Your Occ</div><div style="font-weight:600;color:${myOcc!=null&&myOcc>=80?'var(--green)':myOcc!=null&&myOcc<50?'var(--red)':'var(--text)'}">${myOcc!=null?Math.round(myOcc)+'%':'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">CS Avg / Range</div><div style="font-weight:600">${cs.avg!=null?fmt(cs.avg):'—'}</div><div style="font-size:10px;color:var(--text3)">${cs.min!=null?fmt(cs.min)+' – '+fmt(cs.max):''}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">Your BAR</div><div style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-15?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</div></div>
+      <div style="font-size:11px;color:var(--text3)">${diffStr}</div>
+      <div><span style="background:${sig.bg};color:${sig.color};padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap">${sig.label}</span></div>
     </div>`;
   });
   html+='</div>';
@@ -1855,31 +1931,33 @@ function renderCompPricingGuide(rows){
 }
 
 function renderCompGrid(rows){
-  if(!rows.length){document.getElementById('cr-grid-tbl').innerHTML='<div class="empty">No rate data for this period.</div>';return;}
-  let html='<table class="tbl"><thead><tr><th style="padding:8px 12px">Date</th><th>Day</th><th>CS Occ%</th>';
-  COMP_COLS.forEach(c=>html+=`<th>${c.replace(' Inn','').replace(' Hilton','')}</th>`);
+  if(!rows||!rows.length){document.getElementById('cr-grid-tbl').innerHTML='<div class="empty">No rate data for this period.</div>';return;}
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 12px">Date</th><th>Day</th><th>CS Occ%</th><th>Your Occ%</th>';
+  COMP_COLS.forEach(c=>html+=`<th>${c.replace(' Inn','').replace(' Hilton','').replace('Home2 by','Home2')}</th>`);
   html+='<th>CS Avg</th><th>Your BAR</th></tr></thead><tbody>';
   rows.forEach(row=>{
     const cs=calcCSRates(row);
     const fc=allFc.find(r=>r['Date']===row['Date']);
     const myBar=fc?n(fc['BAR']):null;
+    const myOcc=fc?fixOcc(n(fc['Occ%'])):null;
     const csOcc=n(row['CS Occ%']);
     const isWeekend=['Fri','Sat','Sun'].includes(row['Day']||'');
     const ev=allEv.find(e=>e['Date']===row['Date']);
     const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']);
+    const diff=myBar!=null&&cs.avg!=null?myBar-cs.avg:null;
     html+=`<tr style="${isWeekend?'background:rgba(55,138,221,0.04)':''}${hasEvent?';border-left:3px solid var(--chart-amber)':''}">
       <td style="padding:8px 12px;font-weight:600">${row['Date']?row['Date'].slice(5):''}${hasEvent?' 🏟':''}</td>
       <td style="color:${isWeekend?'var(--chart-blue)':'var(--text2)'};font-weight:${isWeekend?'600':'400'}">${row['Day']||'—'}</td>
-      <td style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</td>`;
-    COMP_COLS.forEach((c,i)=>{
+      <td style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</td>
+      <td style="font-weight:600;color:${myOcc!=null&&myOcc>=80?'var(--green)':myOcc!=null&&myOcc<50?'var(--red)':'var(--text)'}">${myOcc!=null?Math.round(myOcc)+'%':'—'}</td>`;
+    COMP_COLS.forEach(c=>{
       const v=n(row[c]);
       const isMin=v!=null&&cs.min!=null&&v===cs.min&&cs.open>1;
       const isMax=v!=null&&cs.max!=null&&v===cs.max&&cs.open>1;
       html+=`<td style="color:${isMin?'var(--chart-green)':isMax?'var(--chart-red)':'var(--text)'};font-weight:${isMin||isMax?'700':'400'}">${v!=null?fmt(v):'<span style="color:var(--text3)">–</span>'}</td>`;
     });
-    const diff=myBar!=null&&cs.avg!=null?myBar-cs.avg:null;
     html+=`<td style="font-weight:600">${cs.avg!=null?fmt(cs.avg):'—'}</td>
-      <td style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-10?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</td>
+      <td style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-15?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</td>
     </tr>`;
   });
   html+='</tbody></table>';
@@ -1888,8 +1966,9 @@ function renderCompGrid(rows){
 
 function renderCompTrendChart(){
   const today=getToday();
+  const days=parseInt(document.getElementById('cr-days')?.value||30);
   const ago=new Date(); ago.setDate(ago.getDate()-14);
-  const fwd=new Date(); fwd.setDate(fwd.getDate()+30);
+  const fwd=new Date(); fwd.setDate(fwd.getDate()+days);
   const rows=allRi.filter(r=>r['Date']&&r['Date']>=ago.toISOString().slice(0,10)&&r['Date']<=fwd.toISOString().slice(0,10));
   if(!rows.length)return;
 
