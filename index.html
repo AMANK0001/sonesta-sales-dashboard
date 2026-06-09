@@ -1780,43 +1780,38 @@ function openGroupDayBI(dateStr){
     const pipeBlocks=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
     if(!pipeBlocks.length){openModal(label,'<div class="empty">No group data for this night.</div>');return;}
   }
-  // Aggregate multiple room-type rows into one per block
+  // Only show blocks with rooms > 0 tonight
   const dayBlocks=aggregateBiByBlockNight(rawRows).filter(e=>e.rooms>0);
-  const allDayBlocks=aggregateBiByBlockNight(rawRows); // include 0-room for completeness
+
+  if(!dayBlocks.length){
+    openModal(label,'<div class="empty">No group rooms on property tonight.</div>');
+    return;
+  }
 
   const totalRooms=dayBlocks.reduce((s,e)=>s+e.rooms,0);
   const totalRev=dayBlocks.reduce((s,e)=>s+e.rev,0);
-  // Current block total summed from pipeline (unique blocks)
-  const uniqueCodes=[...new Set(allDayBlocks.map(e=>e.blockCode))];
-  const totalCurrentBlock=uniqueCodes.reduce((s,code)=>{
-    const pipe=allPi.find(p=>p['Block Code']===code);
-    return s+(pipe?n(pipe['Current Block'])||0:0);
-  },0);
 
   let body=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
     <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Current block total</div><div style="font-size:20px;font-weight:700">${totalCurrentBlock||'—'}</div></div>
     <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${uniqueCodes.length}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${dayBlocks.length}</div></div>
   </div>`;
 
-  uniqueCodes.forEach(code=>{
-    const pipe=allPi.find(p=>p['Block Code']===code);
-    const e=dayBlocks.find(b=>b.blockCode===code)||allDayBlocks.find(b=>b.blockCode===code);
-    if(!e)return;
+  dayBlocks.forEach(e=>{
+    const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
     const p=pipe?n(pipe['Pickup %']):null;
     const currentBlock=pipe?n(pipe['Current Block']):null;
     const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
     const typesStr=e.roomTypes&&e.roomTypes.length?e.roomTypes.join(', '):'';
     body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
-      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:code}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
-      <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${code}</span></div>
+      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:e.blockCode}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
+      <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${e.blockCode}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${e.rooms||0}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${e.rooms}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Total picked up (block)</span><span class="modal-kv-val">${pickedUpTotal!=null?pickedUpTotal:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Current block size</span><span class="modal-kv-val">${currentBlock!=null?currentBlock:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:${e.rev>0?'var(--green)':'var(--text2)'}">${e.rev>0?fmt(e.rev):'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:var(--green)">${e.rev>0?fmt(e.rev):'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Blended rate</span><span class="modal-kv-val">${e.avgRate!=null?fmt(e.avgRate):'—'}</span></div>
       ${typesStr?`<div class="modal-kv"><span class="modal-kv-label">Room types</span><span class="modal-kv-val" style="font-size:11px">${typesStr}</span></div>`:''}
       ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
@@ -1911,21 +1906,23 @@ function openRevDay(dateStr){
     if(ev['More'])            body+=`<div class="modal-kv"><span class="modal-kv-label">➕ More</span><span class="modal-kv-val">${ev['More']}</span></div>`;
     body+='</div>';
   }
-  // Group blocks on property tonight (Block Info Raw)
+  // Group blocks on property tonight — aggregate room types, only show blocks with rooms > 0
   if(biBlocks.length){
-    const biTotRooms=biBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-    const biTotRev=biBlocks.reduce((s,r)=>s+biCalcRev(r),0);
-    body+=`<div class="modal-section"><div class="modal-section-title">Group blocks on property tonight (${biBlocks.length})</div>`;
-    body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} calc. revenue</div>`;
-    biBlocks.forEach(r=>{
-      const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
-      const rooms=n(r['Rooms Picked Up']); const rate=n(r['Rate']||r['Avg Rate']); const calcRev=biCalcRev(r);
-      body+=`<div style="padding:6px 0;border-bottom:.5px solid var(--border)">
-        <div style="font-weight:600;font-size:12px">${pipe?pipe['Block Name']:r['Block Code']}</div>
-        <div style="font-size:11px;color:var(--text2)">${rooms!=null?rooms:'—'} rooms · ${calcRev>0?fmt(calcRev):'—'} · ${fmt(rate)} rate${pipe?' · '+pipe['Status']:''}</div>
-      </div>`;
-    });
-    body+='</div>';
+    const aggBlocks=aggregateBiByBlockNight(biBlocks).filter(e=>e.rooms>0);
+    if(aggBlocks.length){
+      const biTotRooms=aggBlocks.reduce((s,e)=>s+e.rooms,0);
+      const biTotRev=aggBlocks.reduce((s,e)=>s+e.rev,0);
+      body+=`<div class="modal-section"><div class="modal-section-title">Group blocks on property tonight (${aggBlocks.length})</div>`;
+      body+=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">${biTotRooms} rooms · ${fmt(biTotRev)} calc. revenue</div>`;
+      aggBlocks.forEach(e=>{
+        const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
+        body+=`<div style="padding:6px 0;border-bottom:.5px solid var(--border)">
+          <div style="font-weight:600;font-size:12px">${pipe?pipe['Block Name']:e.blockCode}</div>
+          <div style="font-size:11px;color:var(--text2)">${e.rooms} rooms · ${e.rev>0?fmt(e.rev):'—'} · ${e.avgRate!=null?fmt(e.avgRate):' —'} rate${pipe?' · '+pipe['Status']:''}</div>
+        </div>`;
+      });
+      body+='</div>';
+    }
   }
   if(!rv&&!fc&&!ev&&!biBlocks.length) body='<div class="empty">No data for this date.</div>';
   openModal(label,body);
