@@ -170,6 +170,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('grp-rev',this)"><i class="ti ti-report-money"></i> Groups Revenue</button>
   <button class="nav-tab" onclick="showPage('revenue',this)"><i class="ti ti-chart-bar"></i> Revenue</button>
   <button class="nav-tab" onclick="showPage('channels',this)"><i class="ti ti-sitemap"></i> Channels</button>
+  <button class="nav-tab" onclick="showPage('comp-rates',this)"><i class="ti ti-trending-up"></i> Comp Rates</button>
   <button class="nav-tab" onclick="showPage('events-cal',this)"><i class="ti ti-calendar-event"></i> Events cal</button>
   <button class="nav-tab" onclick="showPage('groups-cal',this)"><i class="ti ti-calendar-stats"></i> Groups cal</button>
   <button class="nav-tab" onclick="showPage('rev-cal',this)"><i class="ti ti-calendar-dollar"></i> Rev cal</button>
@@ -206,15 +207,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="mc"><div class="mc-label">Total rooms available</div><div class="mc-val" id="p-avail">—</div></div>
     <div class="mc"><div class="mc-label">Past cutoff</div><div class="mc-val" id="p-pastco">—</div></div>
     <div class="mc"><div class="mc-label">Completed</div><div class="mc-val" id="p-completed">—</div></div>
+    <div class="mc"><div class="mc-label">Died / No-show</div><div class="mc-val" id="p-died" style="color:var(--text2)">—</div><div class="mc-sub">0 pickup, past arrival</div></div>
     <div class="mc"><div class="mc-label">Lost / cancelled</div><div class="mc-val" id="p-lost">—</div></div>
   </div>
-  <div class="tab-row">
-    <button class="ftab active" onclick="filterPipe('risk',this)"><i class="ti ti-alert-triangle" style="font-size:11px"></i> At-risk</button>
-    <button class="ftab" onclick="filterPipe('upcoming',this)">Cutoff ≤21d</button>
-    <button class="ftab" onclick="filterPipe('def',this)">All definite</button>
-    <button class="ftab" onclick="filterPipe('ten',this)">Tentative</button>
-    <button class="ftab" onclick="filterPipe('completed',this)">Completed</button>
-    <button class="ftab" onclick="filterPipe('lost',this)">Lost / Cancelled</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.75rem">
+    <div class="tab-row" style="margin-bottom:0">
+      <button class="ftab active" onclick="filterPipe('risk',this)"><i class="ti ti-alert-triangle" style="font-size:11px"></i> At-risk</button>
+      <button class="ftab" onclick="filterPipe('upcoming',this)">Cutoff ≤21d</button>
+      <button class="ftab" onclick="filterPipe('def',this)">All definite</button>
+      <button class="ftab" onclick="filterPipe('ten',this)">Tentative</button>
+      <button class="ftab" onclick="filterPipe('completed',this)">Completed</button>
+      <button class="ftab" onclick="filterPipe('died',this)"><i class="ti ti-ghost" style="font-size:11px"></i> Died / No-show</button>
+      <button class="ftab" onclick="filterPipe('lost',this)">Lost / Cancelled</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:var(--text2)">Sort:</span>
+      <select id="pipe-sort" onchange="rerenderPipe()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <option value="default">Default (risk → cutoff)</option>
+        <option value="arrival">Arrival date</option>
+        <option value="pickup">Pickup % ↑ (worst first)</option>
+        <option value="rooms">Rooms available ↓</option>
+        <option value="cutoff">Days to cutoff</option>
+        <option value="name">Name A–Z</option>
+      </select>
+      <input id="pipe-search" type="text" placeholder="Search…" oninput="rerenderPipe()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;width:140px">
+    </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div id="pipe-body" style="overflow-x:auto"><div class="loading">Loading...</div></div></div>
 </div>
@@ -439,6 +456,67 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- COMP RATES -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-comp-rates">
+  <!-- KPI strip -->
+  <div class="metric-grid" id="cr-kpis"></div>
+
+  <!-- Sub-nav -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+    <div class="tab-row" style="margin-bottom:0">
+      <button class="ftab active" onclick="compRateTab('pricing',this)"><i class="ti ti-currency-dollar" style="font-size:11px"></i> Pricing Guide</button>
+      <button class="ftab" onclick="compRateTab('grid',this)"><i class="ti ti-table" style="font-size:11px"></i> Rate Grid</button>
+      <button class="ftab" onclick="compRateTab('trend',this)"><i class="ti ti-chart-line" style="font-size:11px"></i> Trend</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--text2)">Show next</span>
+      <select id="cr-days" onchange="renderCompRates()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <option value="14">14 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="60">60 days</option>
+        <option value="90">90 days</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Pricing Guide -->
+  <div id="crpanel-pricing">
+    <div class="alert alert-blue" style="margin-bottom:1rem;background:var(--blue-bg);color:var(--blue)">
+      <i class="ti ti-info-circle"></i>
+      <span>Comp set: Hilton Garden Inn · Hampton Inn · Home2 Hilton · Fairfield Inn · Residence Inn · Best Western. Rates from Amadeus Rev360 via Expedia. Blank = closed or no data.</span>
+    </div>
+    <div id="cr-pricing-tbl"></div>
+  </div>
+
+  <!-- Rate Grid -->
+  <div id="crpanel-grid" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><div id="cr-grid-tbl"></div></div>
+    </div>
+  </div>
+
+  <!-- Trend -->
+  <div id="crpanel-trend" style="display:none">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Comp set avg rate vs your BAR</div>
+        <div class="legend">
+          <span><span class="legend-sq" style="background:var(--chart-blue)"></span>Your BAR</span>
+          <span><span class="legend-sq" style="background:var(--chart-amber)"></span>CS Avg Rate</span>
+          <span><span class="legend-sq" style="background:var(--chart-gray);opacity:.5"></span>CS Min–Max range</span>
+        </div>
+        <div class="chart-wrap-lg"><canvas id="crTrendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Comp set occupancy</div>
+        <div class="chart-wrap-lg"><canvas id="crOccChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- ACTIONS -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-actions">
@@ -472,7 +550,8 @@ const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07'
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
 
 const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[];
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[];
+let pipeCurrentMode='risk';
 
 // Calendar state
 const calState = { events:{year:2026,month:6}, groups:{year:2026,month:6}, rev:{year:2026,month:6} };
@@ -487,6 +566,7 @@ function showPage(id,btn){
   if(id==='groups-cal') renderGroupsCal();
   if(id==='rev-cal')    renderRevCal();
   if(id==='grp-rev')    renderGroupsRevenue();
+  if(id==='comp-rates') renderCompRates();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -513,17 +593,18 @@ function normMonth(raw){ if(!raw)return null; const m=raw.trim().match(/^(\d{4})
 function moLabel(key){ return key?(MN[key.slice(5)]||key):'—'; }
 
 // ── EFFECTIVE STATUS ─────────────────────────────────────────────────────────
-// Returns: 'COMPLETED' | 'LOS' (lost/cancelled) | original status (DEF/TEN)
+// Returns: 'COMPLETED' | 'DIED' | 'LOS' | original status (DEF/TEN)
+// DIED = 0 rooms picked up AND arrival date is in the past AND not CAN/LOS
 function effectiveStatus(r){
   const today=getToday();
-  // Explicitly cancelled/lost
   if(r['Status']==='CAN'||r['Status']==='LOS') return 'LOS';
   const arrival=r['Arrival']||'';
   const dtc=n(r['Days to Cutoff']);
-  // ACT = completed stay
   if(r['Status']==='ACT') return 'COMPLETED';
-  // Arrival in the past AND cutoff in the past → treat as completed (not lost)
+  // Arrival past + cutoff past → completed
   if(arrival && arrival < today && dtc!=null && dtc<0) return 'COMPLETED';
+  // 0 rooms picked up + arrival has passed → died/no-show
+  if(arrival && arrival < today && (n(r['Rooms Picked Up'])||0)===0) return 'DIED';
   return r['Status'];
 }
 
@@ -532,15 +613,15 @@ async function loadAll(){
   document.getElementById('ts').textContent='Refreshing...';
   document.getElementById('err').style.display='none';
   try{
-    const [fcV,rvV,chV,piV,moV,evV,biV]=await Promise.all([
+    const [fcV,rvV,chV,piV,moV,evV,biV,riV]=await Promise.all([
       fetchTab(HUB,'Daily Forecast'), fetchTab(HUB,'Daily Revenue'),
       fetchTab(HUB,'Channel Summary'), fetchTab(HUB,'Group Pipeline'),
       fetchTab(HUB,'Monthly Summary'), fetchTab(HUB,'Events'),
-      fetchTab(HUB,'Block Info Raw'),
+      fetchTab(HUB,'Block Info Raw'), fetchTab(HUB,'Rate Intelligence'),
     ]);
     allFc=toRows(fcV); allRv=toRows(rvV); allCh=toRows(chV);
     allPi=toRows(piV); allMo=toRows(moV).map(r=>({...r,_mo:normMonth(r['Month'])})).filter(r=>r._mo);
-    allEv=toRows(evV); allBi=toRows(biV);
+    allEv=toRows(evV); allBi=toRows(biV); allRi=toRows(riV);
 
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
@@ -593,7 +674,7 @@ function renderKPIs(){
   const mvEl=document.getElementById('k-mtdvar');
   if(mtdRev>0){mvEl.textContent=(mtdVar>=0?'+':'')+fmt(mtdVar)+' vs target';mvEl.className='mc-delta '+(mtdVar>=0?'up':'down');}
 
-  const atRisk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED').length;
+  const atRisk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED').length;
   document.getElementById('k-atrisk').textContent=atRisk;
 
   const chanYTD=allCh.filter(r=>r['Date']&&r['Date']<=today&&r['Date']>='2026-01-01');
@@ -659,7 +740,7 @@ function renderOccChart(){
 
 // ── RISK PREVIEW ─────────────────────────────────────────────────────────────
 function renderRiskPreview(){
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED')
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED')
     .sort((a,b)=>(n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999)).slice(0,5);
   const el=document.getElementById('risk-preview');
   if(!risk.length){el.innerHTML='<div class="empty">No at-risk groups right now.</div>';return;}
@@ -679,10 +760,11 @@ function renderRiskPreview(){
 
 // ── PIPELINE ─────────────────────────────────────────────────────────────────
 function renderPipeMetrics(){
-  const active=allPi.filter(r=>effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  const active=allPi.filter(r=>effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED');
   const lost=allPi.filter(r=>effectiveStatus(r)==='LOS');
   const completed=allPi.filter(r=>effectiveStatus(r)==='COMPLETED');
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  const died=allPi.filter(r=>effectiveStatus(r)==='DIED');
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED');
   const pastCo=active.filter(r=>(n(r['Days to Cutoff'])||1)<0);
   document.getElementById('p-active').textContent=active.length;
   document.getElementById('p-atrisk').textContent=risk.length;
@@ -690,23 +772,49 @@ function renderPipeMetrics(){
   document.getElementById('p-avail').textContent=active.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
   document.getElementById('p-pastco').textContent=pastCo.length;
   document.getElementById('p-completed').textContent=completed.length;
+  document.getElementById('p-died').textContent=died.length;
   document.getElementById('p-lost').textContent=lost.length;
 }
 
+function rerenderPipe(){ filterPipe(pipeCurrentMode, null); }
+
 function filterPipe(mode,btn){
+  pipeCurrentMode=mode;
   document.querySelectorAll('#page-pipeline .ftab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  else {
+    // re-highlight correct tab
+    const tabs=document.querySelectorAll('#page-pipeline .ftab');
+    const modeMap={'risk':0,'upcoming':1,'def':2,'ten':3,'completed':4,'died':5,'lost':6};
+    if(tabs[modeMap[mode]])tabs[modeMap[mode]].classList.add('active');
+  }
+
+  const search=(document.getElementById('pipe-search')?.value||'').toLowerCase();
+  const sortMode=document.getElementById('pipe-sort')?.value||'default';
 
   let rows=allPi;
-  if(mode==='risk')      rows=rows.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
-  else if(mode==='upcoming') rows=rows.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=21&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED';});
-  else if(mode==='def')  rows=rows.filter(r=>r['Status']==='DEF'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
-  else if(mode==='ten')  rows=rows.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  const isActive=r=>effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED';
+
+  if(mode==='risk')      rows=rows.filter(r=>r['At Risk?']==='YES'&&isActive(r));
+  else if(mode==='upcoming') rows=rows.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=21&&isActive(r);});
+  else if(mode==='def')  rows=rows.filter(r=>r['Status']==='DEF'&&isActive(r));
+  else if(mode==='ten')  rows=rows.filter(r=>r['Status']==='TEN'&&isActive(r));
   else if(mode==='completed') rows=rows.filter(r=>effectiveStatus(r)==='COMPLETED');
+  else if(mode==='died') rows=rows.filter(r=>effectiveStatus(r)==='DIED');
   else if(mode==='lost') rows=rows.filter(r=>effectiveStatus(r)==='LOS');
 
+  // Search filter
+  if(search) rows=rows.filter(r=>(r['Block Name']||'').toLowerCase().includes(search)||(r['Block Code']||'').toLowerCase().includes(search));
+
+  // Sort
   rows=rows.slice().sort((a,b)=>{
-    if(mode==='completed'||mode==='lost') return(a['Arrival']||'').localeCompare(b['Arrival']||'');
+    if(sortMode==='arrival') return(a['Arrival']||'').localeCompare(b['Arrival']||'');
+    if(sortMode==='pickup') return(n(a['Pickup %'])||101)-(n(b['Pickup %'])||101);
+    if(sortMode==='rooms') return(n(b['Rooms Available'])||0)-(n(a['Rooms Available'])||0);
+    if(sortMode==='cutoff') return(n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999);
+    if(sortMode==='name') return(a['Block Name']||'').localeCompare(b['Block Name']||'');
+    // default: at-risk first, then cutoff
+    if(mode==='completed'||mode==='lost'||mode==='died') return(a['Arrival']||'').localeCompare(b['Arrival']||'');
     const ar=a['At Risk?']==='YES'?0:1,br=b['At Risk?']==='YES'?0:1;
     if(ar!==br)return ar-br;
     return(n(a['Days to Cutoff'])||999)-(n(b['Days to Cutoff'])||999);
@@ -715,18 +823,20 @@ function filterPipe(mode,btn){
   const body=document.getElementById('pipe-body');
   if(!rows.length){body.innerHTML='<div class="empty">No groups match this filter.</div>';return;}
 
-  const isHistorical=(mode==='completed'||mode==='lost');
+  const isHistorical=(mode==='completed'||mode==='died'||mode==='lost');
   let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Group</th><th>Arrival</th><th>Status</th>';
   if(!isHistorical) html+='<th>Pickup</th><th>Avail</th><th>Cutoff</th><th>Flag</th>';
+  else if(mode==='died') html+='<th>Block size</th><th>Contracted</th><th>Market</th><th>Note</th>';
   else html+='<th>Rooms picked up</th><th>Avg Rate</th><th>Revenue</th><th>Market</th>';
   html+='</tr></thead><tbody>';
 
   rows.forEach(r=>{
     const p=n(r['Pickup %']); const dtc=n(r['Days to Cutoff']);
     const eff=effectiveStatus(r);
-    const isR=r['At Risk?']==='YES'&&eff!=='LOS'&&eff!=='COMPLETED';
+    const isR=r['At Risk?']==='YES'&&eff!=='LOS'&&eff!=='COMPLETED'&&eff!=='DIED';
     const fc=p==null?'f-blue':p>=75?'f-grn':p>=40?'f-amb':'f-red';
     const sb=eff==='COMPLETED'?'<span class="badge b-purple">Completed</span>':
+              eff==='DIED'?'<span class="badge b-gray"><i class="ti ti-ghost" style="font-size:10px"></i> No-show</span>':
               eff==='LOS'?'<span class="badge b-gray">Lost/CAN</span>':
               r['Status']==='DEF'?'<span class="badge b-green">DEF</span>':
               r['Status']==='TEN'?'<span class="badge b-amber">TEN</span>':
@@ -735,7 +845,8 @@ function filterPipe(mode,btn){
     const fb=isR?'<span class="badge b-red"><i class="ti ti-alert-triangle" style="font-size:10px"></i> At risk</span>':
               dtc!=null&&dtc<=7?'<span class="badge b-amber">Cutoff soon</span>':
               '<span class="badge b-gray">OK</span>';
-    const avgRate=n(r['Avg Rate']); const actRev=n(r['Actual Revenue']);
+    const avgRate=n(r['Avg Rate']);
+    const actRev=allBi.filter(b=>b['Block Code']===r['Block Code']&&biHasRooms(b)).reduce((s,b)=>s+biCalcRev(b),0);
     html+=`<tr><td style="padding:10px 14px"><div style="font-weight:600">${r['Block Name']||'—'}</div><div style="font-size:11px;color:var(--text2)">${r['Block Code']||''}</div></td>
       <td>${r['Arrival']||'—'}</td><td>${sb}</td>`;
     if(!isHistorical){
@@ -745,10 +856,15 @@ function filterPipe(mode,btn){
         <td style="font-weight:600">${r['Rooms Available']||'—'}</td>
         <td style="font-size:12px;color:${dtc!=null&&dtc<=7?'var(--red)':dtc!=null&&dtc<=14?'var(--amber)':'var(--text2)'}">${dtc!=null?(dtc<0?'Past cutoff':dtc+'d'):'—'}</td>
         <td>${fb}</td>`;
+    } else if(mode==='died'){
+      html+=`<td>${r['Current Block']||'—'}</td>
+        <td>${r['Contracted Rooms']||'—'}</td>
+        <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>
+        <td style="font-size:11px;color:var(--text3)">0 rooms picked up, arrival passed</td>`;
     } else {
       html+=`<td style="font-weight:600">${r['Rooms Picked Up']||'0'}</td>
         <td>${avgRate!=null?fmt(avgRate):'—'}</td>
-        <td style="font-weight:600">${actRev!=null?fmt(actRev):'—'}</td>
+        <td style="font-weight:700;color:${actRev>0?'var(--green)':'var(--text)'}">${actRev>0?fmt(actRev):'—'}</td>
         <td><span class="badge b-gray">${r['Market Type']||'—'}</span></td>`;
     }
     html+='</tr>';
@@ -1564,7 +1680,7 @@ function renderActions(){
     desc:'Each OTA booking costs ~18% in commission vs near-zero for direct.',
     action:'Promote Sonesta loyalty rates at check-in, Best Rate Guarantee messaging, and direct corporate contracts.'
   });
-  const cutSoon=allPi.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=14&&r['At Risk?']!=='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED';});
+  const cutSoon=allPi.filter(r=>{const d=n(r['Days to Cutoff']);return d!=null&&d>=0&&d<=14&&r['At Risk?']!=='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED';});
   if(cutSoon.length) actions.push({pri:2,icon:'ti-calendar-event',color:'var(--amber)',
     title:`${cutSoon.length} group cutoff${cutSoon.length>1?'s':''} in next 14 days`,
     desc:cutSoon.map(r=>`<b>${r['Block Name']}</b> — ${Math.round(n(r['Pickup %'])||0)}% pickup, ${r['Days to Cutoff']}d`).join('<br>'),
@@ -1582,7 +1698,7 @@ function renderActions(){
       action:'Consider last-minute promos, weekend packages, or outreach to past corporate accounts.'
     });
   }
-  const ten=allPi.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  const ten=allPi.filter(r=>r['Status']==='TEN'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED');
   if(ten.length) actions.push({pri:3,icon:'ti-clock',color:'var(--blue)',
     title:`${ten.length} tentative group${ten.length>1?'s':''} (${ten.reduce((s,r)=>s+(n(r['Current Block'])||0),0)} rooms) awaiting conversion`,
     desc:ten.map(r=>r['Block Name']).join(', '),
@@ -1599,6 +1715,202 @@ function renderActions(){
       <div class="insight-action"><strong>Action:</strong> ${a.action}</div>
       <div class="insight-pri ${priClass[a.pri]}">${priLabel[a.pri]}</div>
     </div></div>`).join('');
+}
+
+// ── COMP RATES ────────────────────────────────────────────────────────────────
+// Included comps (excludes Envision, Comfort Inn, Red Roof)
+const COMP_COLS=['Hilton Garden Inn','Hampton Inn','Home2 Hilton','Fairfield Inn','Residence Inn','Best Western'];
+const COMP_COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A'];
+let crCurrentPanel='pricing';
+
+function compRateTab(panel,btn){
+  crCurrentPanel=panel;
+  document.querySelectorAll('#page-comp-rates .ftab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('crpanel-pricing').style.display=panel==='pricing'?'':'none';
+  document.getElementById('crpanel-grid').style.display=panel==='grid'?'':'none';
+  document.getElementById('crpanel-trend').style.display=panel==='trend'?'':'none';
+  if(panel==='trend') renderCompTrendChart();
+}
+
+// Calculate avg/min/max from only the 6 included comps
+function calcCSRates(row){
+  const vals=COMP_COLS.map(c=>n(row[c])).filter(v=>v!=null&&v>0);
+  if(!vals.length)return{avg:null,min:null,max:null,open:0};
+  return{
+    avg:vals.reduce((s,v)=>s+v,0)/vals.length,
+    min:Math.min(...vals),
+    max:Math.max(...vals),
+    open:vals.length
+  };
+}
+
+function renderCompRates(){
+  if(!allRi.length){
+    document.getElementById('cr-kpis').innerHTML='<div class="empty" style="grid-column:1/-1">No Rate Intelligence data loaded. Check that the Rate Intelligence tab exists in Data Hub.</div>';
+    return;
+  }
+  const today=getToday();
+  const days=parseInt(document.getElementById('cr-days')?.value||30);
+  const cutEnd=new Date(); cutEnd.setDate(cutEnd.getDate()+days);
+  const endStr=cutEnd.toISOString().slice(0,10);
+
+  // Rows from today forward
+  const fwdRows=allRi.filter(r=>r['Date']&&r['Date']>=today&&r['Date']<=endStr);
+  // Today's row for KPIs
+  const todayRow=allRi.find(r=>r['Date']===today)||allRi.find(r=>r['Date']>=today);
+
+  // KPIs
+  const todayCS=todayRow?calcCSRates(todayRow):{avg:null,min:null,max:null,open:0};
+  const todayBAR=allFc.find(r=>r['Date']===(todayRow?todayRow['Date']:today));
+  const myBar=todayBAR?n(todayBAR['BAR']):null;
+  const csOcc=todayRow?n(todayRow['CS Occ%']):null;
+
+  // Next 30d avg CS rate
+  const fwdWithRates=fwdRows.map(r=>calcCSRates(r)).filter(c=>c.avg!=null);
+  const fwdAvg=fwdWithRates.length?fwdWithRates.reduce((s,c)=>s+c.avg,0)/fwdWithRates.length:null;
+
+  // Position vs comp
+  let posLabel='—'; let posColor='var(--text2)';
+  if(myBar!=null&&todayCS.avg!=null){
+    const diff=myBar-todayCS.avg;
+    const pct=Math.round(diff/todayCS.avg*100);
+    if(diff>0){posLabel=`+${fmt(diff)} above avg (${pct>0?'+':''}${pct}%)`;posColor='var(--green)';}
+    else if(diff<0){posLabel=`${fmt(diff)} below avg (${pct}%)`;posColor='var(--red)';}
+    else{posLabel='At comp avg';posColor='var(--text2)';}
+  }
+
+  document.getElementById('cr-kpis').innerHTML=`
+    <div class="mc"><div class="mc-label">CS occ% today</div><div class="mc-val">${csOcc!=null?Math.round(csOcc*10)/10+'%':'—'}</div><div class="mc-sub">comp set avg</div></div>
+    <div class="mc"><div class="mc-label">CS avg rate today</div><div class="mc-val">${todayCS.avg!=null?fmt(todayCS.avg):'—'}</div><div class="mc-sub">${todayCS.open} of 6 comps open</div></div>
+    <div class="mc"><div class="mc-label">CS range today</div><div class="mc-val" style="font-size:16px">${todayCS.min!=null?fmt(todayCS.min)+' – '+fmt(todayCS.max):'—'}</div><div class="mc-sub">min – max</div></div>
+    <div class="mc"><div class="mc-label">Your BAR today</div><div class="mc-val">${myBar!=null?fmt(myBar):'—'}</div><div class="mc-delta" style="color:${posColor};font-size:11px">${posLabel}</div></div>
+    <div class="mc"><div class="mc-label">CS avg next ${days}d</div><div class="mc-val">${fwdAvg!=null?fmt(fwdAvg):'—'}</div><div class="mc-sub">forward-looking avg</div></div>`;
+
+  if(crCurrentPanel==='pricing') renderCompPricingGuide(fwdRows,today);
+  if(crCurrentPanel==='grid') renderCompGrid(fwdRows);
+  if(crCurrentPanel==='trend') renderCompTrendChart();
+}
+
+function renderCompPricingGuide(rows,today){
+  if(!rows.length){document.getElementById('cr-pricing-tbl').innerHTML='<div class="empty">No rate data available for this period.</div>';return;}
+
+  let html='<div style="display:flex;flex-direction:column;gap:6px">';
+  // Group by week for readability
+  rows.forEach(row=>{
+    const cs=calcCSRates(row);
+    const fc=allFc.find(r=>r['Date']===row['Date']);
+    const myBar=fc?n(fc['BAR']):null;
+    const myOcc=fc?fixOcc(n(fc['Occ%'])):null;
+    const csOcc=n(row['CS Occ%']);
+    const diff=myBar!=null&&cs.avg!=null?myBar-cs.avg:null;
+
+    // Pricing signal
+    let signal=''; let sigColor='var(--text3)'; let sigBg='var(--bg2)';
+    if(cs.open===0){signal='All comps closed';sigColor='var(--text3)';}
+    else if(diff!=null){
+      if(myOcc!=null&&myOcc>=85&&diff<20){signal='↑ Opportunity to push rate';sigColor='var(--green)';sigBg='var(--green-bg)';}
+      else if(myBar!=null&&cs.min!=null&&myBar>cs.min*1.15&&(myOcc==null||myOcc<60)){signal='↓ Consider lowering — above cheapest comp';sigColor='var(--amber)';sigBg='var(--amber-bg)';}
+      else if(diff>30){signal='↑ Well above comp avg';sigColor='var(--blue)';sigBg='var(--blue-bg)';}
+      else if(diff<-20){signal='⚠ Significantly below comp avg';sigColor='var(--red)';sigBg='var(--red-bg)';}
+      else{signal='✓ Competitive';sigColor='var(--chart-green)';}
+    }
+
+    const isWeekend=['Fri','Sat','Sun'].includes(row['Day']||'');
+    const ev=allEv.find(e=>e['Date']===row['Date']);
+    const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']);
+    const evTag=hasEvent?`<span style="font-size:11px">🏟</span>`:'';
+    const wkTag=isWeekend?`<span class="badge b-blue" style="font-size:10px;padding:1px 6px">WKD</span>`:'';
+
+    html+=`<div style="display:grid;grid-template-columns:90px 60px 80px 90px 100px 80px 1fr;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--bg);font-size:12px">
+      <div><div style="font-weight:600">${row['Date']?row['Date'].slice(5):''}</div><div style="font-size:11px;color:var(--text2)">${row['Day']||''} ${evTag}</div></div>
+      <div>${wkTag}</div>
+      <div><div style="font-size:11px;color:var(--text2)">CS Occ</div><div style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">CS Avg</div><div style="font-weight:600">${cs.avg!=null?fmt(cs.avg):'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">CS Min–Max</div><div style="font-weight:500;font-size:11px">${cs.min!=null?fmt(cs.min)+' – '+fmt(cs.max):'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text2)">Your BAR</div><div style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-10?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</div></div>
+      <div><span style="background:${sigBg};color:${sigColor};padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">${signal||'—'}</span></div>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('cr-pricing-tbl').innerHTML=html;
+}
+
+function renderCompGrid(rows){
+  if(!rows.length){document.getElementById('cr-grid-tbl').innerHTML='<div class="empty">No rate data for this period.</div>';return;}
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 12px">Date</th><th>Day</th><th>CS Occ%</th>';
+  COMP_COLS.forEach(c=>html+=`<th>${c.replace(' Inn','').replace(' Hilton','')}</th>`);
+  html+='<th>CS Avg</th><th>Your BAR</th></tr></thead><tbody>';
+  rows.forEach(row=>{
+    const cs=calcCSRates(row);
+    const fc=allFc.find(r=>r['Date']===row['Date']);
+    const myBar=fc?n(fc['BAR']):null;
+    const csOcc=n(row['CS Occ%']);
+    const isWeekend=['Fri','Sat','Sun'].includes(row['Day']||'');
+    const ev=allEv.find(e=>e['Date']===row['Date']);
+    const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']);
+    html+=`<tr style="${isWeekend?'background:rgba(55,138,221,0.04)':''}${hasEvent?';border-left:3px solid var(--chart-amber)':''}">
+      <td style="padding:8px 12px;font-weight:600">${row['Date']?row['Date'].slice(5):''}${hasEvent?' 🏟':''}</td>
+      <td style="color:${isWeekend?'var(--chart-blue)':'var(--text2)'};font-weight:${isWeekend?'600':'400'}">${row['Day']||'—'}</td>
+      <td style="font-weight:600">${csOcc!=null?Math.round(csOcc)+'%':'—'}</td>`;
+    COMP_COLS.forEach((c,i)=>{
+      const v=n(row[c]);
+      const isMin=v!=null&&cs.min!=null&&v===cs.min&&cs.open>1;
+      const isMax=v!=null&&cs.max!=null&&v===cs.max&&cs.open>1;
+      html+=`<td style="color:${isMin?'var(--chart-green)':isMax?'var(--chart-red)':'var(--text)'};font-weight:${isMin||isMax?'700':'400'}">${v!=null?fmt(v):'<span style="color:var(--text3)">–</span>'}</td>`;
+    });
+    const diff=myBar!=null&&cs.avg!=null?myBar-cs.avg:null;
+    html+=`<td style="font-weight:600">${cs.avg!=null?fmt(cs.avg):'—'}</td>
+      <td style="font-weight:700;color:${diff!=null&&diff>0?'var(--green)':diff!=null&&diff<-10?'var(--red)':'var(--text)'}">${myBar!=null?fmt(myBar):'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('cr-grid-tbl').innerHTML=html;
+}
+
+function renderCompTrendChart(){
+  const today=getToday();
+  const ago=new Date(); ago.setDate(ago.getDate()-14);
+  const fwd=new Date(); fwd.setDate(fwd.getDate()+30);
+  const rows=allRi.filter(r=>r['Date']&&r['Date']>=ago.toISOString().slice(0,10)&&r['Date']<=fwd.toISOString().slice(0,10));
+  if(!rows.length)return;
+
+  const labels=rows.map(r=>r['Date'].slice(5));
+  const csAvg=rows.map(r=>{const c=calcCSRates(r);return c.avg!=null?Math.round(c.avg):null;});
+  const csMin=rows.map(r=>{const c=calcCSRates(r);return c.min;});
+  const csMax=rows.map(r=>{const c=calcCSRates(r);return c.max;});
+  const myBARs=rows.map(r=>{const fc=allFc.find(f=>f['Date']===r['Date']);return fc?n(fc['BAR']):null;});
+  const csOccs=rows.map(r=>n(r['CS Occ%']));
+
+  if(charts.crTrend)charts.crTrend.destroy();
+  charts.crTrend=new Chart(document.getElementById('crTrendChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Your BAR',data:myBARs,borderColor:'#378ADD',borderWidth:2.5,pointRadius:2,fill:false,tension:0.3,order:1},
+      {label:'CS Avg',data:csAvg,borderColor:'#EF9F27',borderWidth:2,pointRadius:2,fill:false,tension:0.3,borderDash:[4,2],order:2},
+      {label:'CS Max',data:csMax,borderColor:'rgba(136,135,128,0.3)',borderWidth:1,pointRadius:0,fill:false,tension:0.3,order:3},
+      {label:'CS Min',data:csMin,borderColor:'rgba(136,135,128,0.3)',borderWidth:1,pointRadius:0,fill:'-1',backgroundColor:'rgba(136,135,128,0.07)',tension:0.3,order:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>{
+        if(c.dataset.label==='CS Min'||c.dataset.label==='CS Max')return null;
+        return c.dataset.label+': '+(c.parsed.y!=null?fmt(c.parsed.y):'—');
+      }}}},
+      scales:{x:{ticks:{maxTicksLimit:10,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
+              y:{ticks:{callback:v=>fmt(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}
+    }
+  });
+
+  if(charts.crOcc)charts.crOcc.destroy();
+  charts.crOcc=new Chart(document.getElementById('crOccChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'CS Occ%',data:csOccs,backgroundColor:'rgba(55,138,221,0.5)',borderRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y!=null?'CS Occ: '+Math.round(c.parsed.y)+'%':'—'}}},
+      scales:{x:{ticks:{maxTicksLimit:10,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
+              y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}
+    }
+  });
 }
 
 loadAll();
