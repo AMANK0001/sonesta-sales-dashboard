@@ -1722,6 +1722,7 @@ function renderActions(){
 const COMP_COLS=['Hilton Garden Inn','Hampton Inn','Home2 Hilton','Fairfield Inn','Residence Inn','Best Western'];
 const COMP_COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A'];
 let crCurrentPanel='pricing';
+let crFwdRows=[];  // stored at module scope so tab switches can re-render
 
 function compRateTab(panel,btn){
   crCurrentPanel=panel;
@@ -1730,7 +1731,9 @@ function compRateTab(panel,btn){
   document.getElementById('crpanel-pricing').style.display=panel==='pricing'?'':'none';
   document.getElementById('crpanel-grid').style.display=panel==='grid'?'':'none';
   document.getElementById('crpanel-trend').style.display=panel==='trend'?'':'none';
-  if(panel==='trend') renderCompTrendChart();
+  if(panel==='pricing') renderCompPricingGuide(crFwdRows);
+  if(panel==='grid')    renderCompGrid(crFwdRows);
+  if(panel==='trend')   renderCompTrendChart();
 }
 
 // Calculate avg/min/max from only the 6 included comps
@@ -1780,19 +1783,34 @@ function renderCompRates(){
     else{posLabel='At comp avg';posColor='var(--text2)';}
   }
 
+  // Store for tab switching
+  crFwdRows=fwdRows;
+
+  renderCompRatesKPIs(todayRow,todayCS,myBar,csOcc,fwdAvg,days);
+  if(crCurrentPanel==='pricing') renderCompPricingGuide(crFwdRows);
+  if(crCurrentPanel==='grid')    renderCompGrid(crFwdRows);
+  if(crCurrentPanel==='trend')   renderCompTrendChart();
+}
+
+function renderCompRatesKPIs(todayRow,todayCS,myBar,csOcc,fwdAvg,days){
+  let posLabel='—'; let posColor='var(--text2)';
+  if(myBar!=null&&todayCS.avg!=null){
+    const diff=myBar-todayCS.avg;
+    const pct=Math.round(diff/todayCS.avg*100);
+    if(diff>0){posLabel=`+${fmt(diff)} above avg (${pct>0?'+':''}${pct}%)`;posColor='var(--green)';}
+    else if(diff<0){posLabel=`${fmt(diff)} below avg (${pct}%)`;posColor='var(--red)';}
+    else{posLabel='At comp avg';posColor='var(--text2)';}
+  }
   document.getElementById('cr-kpis').innerHTML=`
     <div class="mc"><div class="mc-label">CS occ% today</div><div class="mc-val">${csOcc!=null?Math.round(csOcc*10)/10+'%':'—'}</div><div class="mc-sub">comp set avg</div></div>
     <div class="mc"><div class="mc-label">CS avg rate today</div><div class="mc-val">${todayCS.avg!=null?fmt(todayCS.avg):'—'}</div><div class="mc-sub">${todayCS.open} of 6 comps open</div></div>
     <div class="mc"><div class="mc-label">CS range today</div><div class="mc-val" style="font-size:16px">${todayCS.min!=null?fmt(todayCS.min)+' – '+fmt(todayCS.max):'—'}</div><div class="mc-sub">min – max</div></div>
     <div class="mc"><div class="mc-label">Your BAR today</div><div class="mc-val">${myBar!=null?fmt(myBar):'—'}</div><div class="mc-delta" style="color:${posColor};font-size:11px">${posLabel}</div></div>
     <div class="mc"><div class="mc-label">CS avg next ${days}d</div><div class="mc-val">${fwdAvg!=null?fmt(fwdAvg):'—'}</div><div class="mc-sub">forward-looking avg</div></div>`;
-
-  if(crCurrentPanel==='pricing') renderCompPricingGuide(fwdRows,today);
-  if(crCurrentPanel==='grid') renderCompGrid(fwdRows);
-  if(crCurrentPanel==='trend') renderCompTrendChart();
 }
 
-function renderCompPricingGuide(rows,today){
+function renderCompPricingGuide(rows){
+  const today=getToday();
   if(!rows.length){document.getElementById('cr-pricing-tbl').innerHTML='<div class="empty">No rate data available for this period.</div>';return;}
 
   let html='<div style="display:flex;flex-direction:column;gap:6px">';
