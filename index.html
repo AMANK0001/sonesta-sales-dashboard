@@ -1416,13 +1416,27 @@ function renderGrNightly(){
   const code=document.getElementById('gr-nightly-block').value;
   const el=document.getElementById('gr-nightly-tbl');
   if(!code){el.innerHTML='<div class="empty">Select a group block above to view night-by-night detail.</div>';return;}
-  const rows=allBi.filter(r=>r['Block Code']===code).sort((a,b)=>(a['Stay Date']||'').localeCompare(b['Stay Date']||''));
-  if(!rows.length){el.innerHTML='<div class="empty">No nightly data found for this block in Block Info Raw.</div>';return;}
+  const rawRows=allBi.filter(r=>r['Block Code']===code);
+  if(!rawRows.length){el.innerHTML='<div class="empty">No nightly data found for this block in Block Info Raw.</div>';return;}
+
+  // Aggregate room types into one row per night
+  const nightMap={};
+  rawRows.forEach(r=>{
+    const date=r['Stay Date']||'?';
+    if(!nightMap[date])nightMap[date]={date,rooms:0,rev:0,rates:[],types:[]};
+    const rms=n(r['Rooms Picked Up'])||0;
+    const rate=n(r['Rate']||r['Avg Rate']);
+    nightMap[date].rooms+=rms;
+    nightMap[date].rev+=biCalcRev(r);
+    if(rate&&rms>0){for(let i=0;i<rms;i++)nightMap[date].rates.push(rate);}
+    if(r['Room Type']&&rms>0) nightMap[date].types.push(r['Room Type']+'×'+rms);
+  });
+  const nights=Object.values(nightMap).sort((a,b)=>a.date.localeCompare(b.date));
+
   const pipe=allPi.find(p=>p['Block Code']===code);
-  // Only rows with rooms > 0 for revenue/ADR; show all rows in table but note 0-room ones
-  const activeRows=rows.filter(r=>biHasRooms(r));
-  const totalNights=activeRows.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-  const totalRev=activeRows.reduce((s,r)=>s+biCalcRev(r),0);
+  const activeNights=nights.filter(e=>e.rooms>0);
+  const totalNights=activeNights.reduce((s,e)=>s+e.rooms,0);
+  const totalRev=activeNights.reduce((s,e)=>s+e.rev,0);
   const avgAdr=totalNights>0?totalRev/totalNights:null;
 
   let html='';
@@ -1430,22 +1444,21 @@ function renderGrNightly(){
     html+=`<div style="padding:.75rem 1.25rem;border-bottom:.5px solid var(--border);display:flex;gap:2rem;flex-wrap:wrap;font-size:12px">
       <div><span style="color:var(--text2)">Block: </span><b>${pipe['Block Name']}</b></div>
       <div><span style="color:var(--text2)">Status: </span><b>${pipe['Status']}</b></div>
-      <div><span style="color:var(--text2)">Nights w/ rooms: </span><b>${totalNights.toLocaleString()}</b></div>
+      <div><span style="color:var(--text2)">Room nights: </span><b>${totalNights.toLocaleString()}</b></div>
       <div><span style="color:var(--text2)">Total revenue: </span><b style="color:var(--green)">${fmt(totalRev)}</b></div>
       <div><span style="color:var(--text2)">Avg ADR: </span><b>${avgAdr!=null?fmt(avgAdr):'—'}</b></div>
-      <div style="color:var(--text3);font-size:11px">Revenue = rooms × rate. Rows with 0 rooms shown but excluded from totals.</div>
     </div>`;
   }
-  html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms Picked Up</th><th>Avg Rate</th><th>Calc. Revenue</th></tr></thead><tbody>';
-  rows.forEach(r=>{
-    const rate=n(r['Rate']||r['Avg Rate']); const rooms=n(r['Rooms Picked Up']);
-    const calcRev=biCalcRev(r);
-    const zeroRow=!biHasRooms(r);
+  html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="padding:8px 14px">Stay Date</th><th>Rooms</th><th>Blended Rate</th><th>Revenue</th><th>Room Types</th></tr></thead><tbody>';
+  nights.forEach(e=>{
+    const avgR=e.rates.length?e.rates.reduce((s,v)=>s+v,0)/e.rates.length:null;
+    const zeroRow=e.rooms===0;
     html+=`<tr style="${zeroRow?'opacity:0.45':''}">
-      <td style="padding:9px 14px;font-weight:500">${r['Stay Date']||'—'}</td>
-      <td style="font-weight:600">${rooms!=null?rooms:'—'}</td>
-      <td>${rate!=null?fmt(rate):'—'}</td>
-      <td style="font-weight:700;color:${calcRev>0?'var(--green)':'var(--text3)'}">${calcRev>0?fmt(calcRev):(zeroRow?'—':fmt(calcRev))}</td>
+      <td style="padding:9px 14px;font-weight:500">${e.date}</td>
+      <td style="font-weight:600">${e.rooms||'0'}</td>
+      <td>${avgR!=null?fmt(avgR):'—'}</td>
+      <td style="font-weight:700;color:${e.rev>0?'var(--green)':'var(--text3)'}">${e.rev>0?fmt(e.rev):'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${e.types.join(', ')||'—'}</td>
     </tr>`;
   });
   html+='</tbody></table></div>';
@@ -1667,50 +1680,89 @@ function openEventDay(dateStr){
 }
 
 // ── GROUPS CALENDAR ──────────────────────────────────────────────────────────
+// Block Info Raw v5 = one row per block per night PER ROOM TYPE
+// Must aggregate by Block Code + Stay Date before displaying
+function aggregateBiByBlockNight(rows){
+  // Returns one entry per unique Block Code + Stay Date
+  const map={};
+  rows.forEach(r=>{
+    const key=(r['Block Code']||'?')+'||'+(r['Stay Date']||'?');
+    if(!map[key]){
+      map[key]={
+        blockCode:r['Block Code'],
+        blockName:r['Block Name'],
+        stayDate:r['Stay Date'],
+        arrival:r['Arrival'],
+        departure:r['Departure'],
+        rooms:0, rev:0,
+        rates:[],  // weighted: push rate × rooms times
+        roomTypes:[]
+      };
+    }
+    const rms=n(r['Rooms Picked Up'])||0;
+    const rate=n(r['Rate']||r['Avg Rate']);
+    const rev=biCalcRev(r);
+    map[key].rooms+=rms;
+    map[key].rev+=rev;
+    if(rate&&rms>0) for(let i=0;i<rms;i++) map[key].rates.push(rate);
+    if(r['Room Type']&&rms>0) map[key].roomTypes.push(r['Room Type']+'×'+rms);
+  });
+  return Object.values(map).map(e=>({
+    ...e,
+    avgRate:e.rates.length?e.rates.reduce((s,v)=>s+v,0)/e.rates.length:null
+  }));
+}
+
 // PRIMARY SOURCE: Block Info Raw (Stay Date = the actual night on property)
 // Joined to Group Pipeline on Block Code for status/at-risk flags
 function renderGroupsCal(){
   const {year,month}=calState.groups;
   document.getElementById('groups-cal-label').textContent=MN_FULL[String(month).padStart(2,'0')]+' '+year;
 
-  // Build a lookup: stayDate → [{blockCode, blockName, rooms, revenue, rate, status, atRisk}]
+  // Build a lookup: stayDate → [one entry per unique block (aggregated across room types)]
   const byDate={};
-  allBi.forEach(r=>{
-    const date=r['Stay Date']; if(!date)return;
-    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+  // First aggregate all bi rows by block+night
+  const biAgg=aggregateBiByBlockNight(allBi);
+  biAgg.forEach(e=>{
+    const date=e.stayDate; if(!date)return;
+    const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
     if(pipe&&effectiveStatus(pipe)==='LOS') return;
     if(!byDate[date])byDate[date]=[];
     byDate[date].push({
-      blockCode:r['Block Code'],
-      blockName:pipe?pipe['Block Name']:r['Block Name']||r['Block Code'],
-      rooms:n(r['Rooms Picked Up'])||0,
-      revenue:biCalcRev(r),
-      rate:n(r['Rate']||r['Avg Rate']),
+      blockCode:e.blockCode,
+      blockName:pipe?pipe['Block Name']:e.blockName||e.blockCode,
+      rooms:e.rooms,
+      revenue:e.rev,
+      avgRate:e.avgRate,
+      roomTypes:e.roomTypes,
       status:pipe?pipe['Status']:'',
       atRisk:pipe?pipe['At Risk?']==='YES':false,
       pickupPct:pipe?n(pipe['Pickup %']):null,
-      hasRooms:biHasRooms(r),
+      hasRooms:e.rooms>0,
+      pipe:pipe||null,
     });
   });
 
   const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
     const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
-    // Only count blocks with actual rooms for cell display
     const dayBlocks=byDate[dateStr]||[];
     const activeBlocks=dayBlocks.filter(b=>b.hasRooms);
     if(!dayBlocks.length) return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')"><div class="cal-day-num">${dayNumHtml}</div></div>`;
-    const totalRooms=dayBlocks.reduce((s,b)=>s+b.rooms,0);
-    const totalRev=dayBlocks.reduce((s,b)=>s+b.revenue,0);
+    const totalRooms=activeBlocks.reduce((s,b)=>s+b.rooms,0);
+    const totalRev=activeBlocks.reduce((s,b)=>s+b.revenue,0);
     const pickups=dayBlocks.map(b=>b.pickupPct).filter(v=>v!=null);
-    const avgPickup=pickups.length?pickups.reduce((s,v)=>s+v,0)/pickups.length:null;
+    // de-dupe pickup pcts (one per block)
+    const uniquePickups=[...new Map(dayBlocks.map(b=>[b.blockCode,b.pickupPct])).values()].filter(v=>v!=null);
+    const avgPickup=uniquePickups.length?uniquePickups.reduce((s,v)=>s+v,0)/uniquePickups.length:null;
     const hasRisk=dayBlocks.some(b=>b.atRisk);
     let colorClass='gray-cell';
     if(avgPickup!=null){if(avgPickup>=70)colorClass='green-cell';else if(avgPickup>=50)colorClass='yellow-cell';else colorClass='red-cell';}
     const fillColor=avgPickup>=70?'#639922':avgPickup>=50?'#EF9F27':'#E24B4A';
     const pctClass=avgPickup>=70?'green':avgPickup>=50?'amber':'red';
+    const blockCount=new Set(dayBlocks.map(b=>b.blockCode)).size;
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')">
       <div class="cal-day-num">${dayNumHtml}</div>
-      <div class="cal-info bold">${dayBlocks.length} group${dayBlocks.length>1?'s':''} ${hasRisk?'⚠':''}</div>
+      <div class="cal-info bold">${blockCount} group${blockCount>1?'s':''} ${hasRisk?'⚠':''}</div>
       <div class="cal-info">${totalRooms} rooms · ${fmtK(totalRev)}</div>
       <div class="cal-bar-wrap">
         ${avgPickup!=null?`<div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(avgPickup,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${Math.round(avgPickup)}% pickup</div>`:''}
@@ -1723,41 +1775,50 @@ function renderGroupsCal(){
 function openGroupDayBI(dateStr){
   const d=new Date(dateStr+'T12:00:00');
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const dayBlocks=allBi.filter(r=>r['Stay Date']===dateStr);
-  if(!dayBlocks.length){
+  const rawRows=allBi.filter(r=>r['Stay Date']===dateStr);
+  if(!rawRows.length){
     const pipeBlocks=allPi.filter(r=>r['Arrival']===dateStr&&effectiveStatus(r)!=='LOS');
     if(!pipeBlocks.length){openModal(label,'<div class="empty">No group data for this night.</div>');return;}
   }
-  let body='';
-  const totalRooms=dayBlocks.reduce((s,r)=>s+(n(r['Rooms Picked Up'])||0),0);
-  const totalRev=dayBlocks.reduce((s,r)=>s+biCalcRev(r),0);
-  // Total current block across all blocks on property tonight
-  const totalCurrentBlock=dayBlocks.reduce((s,r)=>{
-    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+  // Aggregate multiple room-type rows into one per block
+  const dayBlocks=aggregateBiByBlockNight(rawRows).filter(e=>e.rooms>0);
+  const allDayBlocks=aggregateBiByBlockNight(rawRows); // include 0-room for completeness
+
+  const totalRooms=dayBlocks.reduce((s,e)=>s+e.rooms,0);
+  const totalRev=dayBlocks.reduce((s,e)=>s+e.rev,0);
+  // Current block total summed from pipeline (unique blocks)
+  const uniqueCodes=[...new Set(allDayBlocks.map(e=>e.blockCode))];
+  const totalCurrentBlock=uniqueCodes.reduce((s,code)=>{
+    const pipe=allPi.find(p=>p['Block Code']===code);
     return s+(pipe?n(pipe['Current Block'])||0:0);
   },0);
-  body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
+
+  let body=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
     <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
     <div><div style="font-size:11px;color:var(--text2)">Current block total</div><div style="font-size:20px;font-weight:700">${totalCurrentBlock||'—'}</div></div>
     <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
-    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${dayBlocks.length}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${uniqueCodes.length}</div></div>
   </div>`;
-  dayBlocks.forEach(r=>{
-    const pipe=allPi.find(p=>p['Block Code']===r['Block Code']);
+
+  uniqueCodes.forEach(code=>{
+    const pipe=allPi.find(p=>p['Block Code']===code);
+    const e=dayBlocks.find(b=>b.blockCode===code)||allDayBlocks.find(b=>b.blockCode===code);
+    if(!e)return;
     const p=pipe?n(pipe['Pickup %']):null;
-    const rooms=n(r['Rooms Picked Up']); const rate=n(r['Rate']||r['Avg Rate']); const calcRev=biCalcRev(r);
     const currentBlock=pipe?n(pipe['Current Block']):null;
     const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
+    const typesStr=e.roomTypes&&e.roomTypes.length?e.roomTypes.join(', '):'';
     body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
-      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:r['Block Code']}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
-      <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${r['Block Code']||'—'}</span></div>
+      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:code}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
+      <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${code}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${rooms!=null?rooms:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Total picked up (block)</span><span class="modal-kv-val" style="font-weight:600">${pickedUpTotal!=null?pickedUpTotal:'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${e.rooms||0}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Total picked up (block)</span><span class="modal-kv-val">${pickedUpTotal!=null?pickedUpTotal:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Current block size</span><span class="modal-kv-val">${currentBlock!=null?currentBlock:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:${calcRev>0?'var(--green)':'var(--text2)'}">${calcRev>0?fmt(calcRev):(rooms===0?'0 rooms':'—')}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Rate</span><span class="modal-kv-val">${fmt(rate)}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:${e.rev>0?'var(--green)':'var(--text2)'}">${e.rev>0?fmt(e.rev):'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Blended rate</span><span class="modal-kv-val">${e.avgRate!=null?fmt(e.avgRate):'—'}</span></div>
+      ${typesStr?`<div class="modal-kv"><span class="modal-kv-label">Room types</span><span class="modal-kv-val" style="font-size:11px">${typesStr}</span></div>`:''}
       ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
       ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}</span></div>`:''}
     </div>`;
