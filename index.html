@@ -32,7 +32,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .ts{font-size:11px;color:var(--text3)}
 .rbtn{display:flex;align-items:center;gap:5px;padding:6px 14px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:12px;color:var(--text2);transition:background .15s}
 .rbtn:hover{background:var(--bg2)}
-.nav{display:flex;gap:0;border-bottom:.5px solid var(--border);margin-bottom:1.75rem;overflow-x:auto}
+.nav{display:flex;gap:0;border-bottom:.5px solid var(--border);margin-bottom:1.75rem;overflow-x:auto;position:sticky;top:0;background:var(--bg3);z-index:90}
+.mc-val,.rag-rev,.tbl td,.grp-kpi-val{font-variant-numeric:tabular-nums}
+.mc{transition:background .15s}
+.mc:hover{background:var(--bg)}
+.outlook-tbl tbody tr{cursor:pointer}
+.outlook-tbl tbody tr:hover td{background:var(--bg2)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.chip-red{background:var(--red-bg);color:var(--red)}
+.chip-amber{background:var(--amber-bg);color:var(--amber)}
+.chip-green{background:var(--green-bg);color:var(--green)}
+.chip-blue{background:var(--blue-bg);color:var(--blue)}
+.chip-gray{background:var(--bg2);color:var(--text2)}
+.mini-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;min-width:46px;flex:1}
+.mini-bar>div{height:100%;border-radius:2px}
+.need-row{display:grid;grid-template-columns:95px 50px 1fr 90px 110px 1fr;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer;transition:box-shadow .15s}
+.need-row:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+@media(max-width:760px){.need-row{grid-template-columns:80px 1fr 80px;gap:6px}.need-row>div:nth-child(2),.need-row>div:nth-child(5),.need-row>div:nth-child(6){display:none}}
 .nav-tab{padding:.7rem 1.1rem;font-size:13px;font-weight:500;color:var(--text2);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:color .15s}
 .nav-tab:hover{color:var(--text)}
 .nav-tab.active{color:var(--text);border-bottom-color:var(--text)}
@@ -186,15 +202,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">Rooms OTB today</div><div class="mc-val" id="k-rooms">—</div><div class="mc-sub" id="k-occ">Occ%: —</div></div>
     <div class="mc"><div class="mc-label">ADR today</div><div class="mc-val" id="k-adr">—</div><div class="mc-sub" id="k-bar">BAR: —</div></div>
+    <div class="mc"><div class="mc-label">RevPAR today</div><div class="mc-val" id="k-revpar">—</div><div class="mc-sub" id="k-revpar-sub">revenue ÷ 140 rooms</div></div>
     <div class="mc"><div class="mc-label">Today vs target</div><div class="mc-val" id="k-revvar">—</div><div class="mc-sub" id="k-revvar-sub">revenue variance</div></div>
     <div class="mc"><div class="mc-label">MTD revenue</div><div class="mc-val" id="k-mtd">—</div><div class="mc-delta" id="k-mtdvar">vs target: —</div></div>
+    <div class="mc"><div class="mc-label">MTD RevPAR</div><div class="mc-val" id="k-mtd-revpar">—</div><div class="mc-sub" id="k-mtd-revpar-sub">—</div></div>
     <div class="mc"><div class="mc-label">At-risk groups</div><div class="mc-val" id="k-atrisk" style="color:var(--red)">—</div><div class="mc-sub">need action now</div></div>
     <div class="mc"><div class="mc-label">OTA dependency</div><div class="mc-val" id="k-ota">—</div><div class="mc-delta" id="k-ota-flag">YTD mix</div></div>
   </div>
+
+  <div class="card">
+    <div class="card-title">Next 7 days — daily outlook <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">· click any row for full detail</span></div>
+    <div style="overflow-x:auto"><div id="outlook-7d"><div class="loading">Loading...</div></div></div>
+  </div>
+
   <div class="two-col">
     <div class="card"><div class="card-title">Revenue pace — 2026</div><div id="rag-overview"></div></div>
-    <div class="card"><div class="card-title">Occ% trend — last 30 days</div><div class="chart-wrap"><canvas id="occChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Occupancy — past 30 days + next 30 OTB</div>
+      <div class="legend"><span><span class="legend-line" style="background:#378ADD"></span>Actual</span><span><span class="legend-line" style="background:#EF9F27"></span>OTB (future)</span></div>
+      <div class="chart-wrap"><canvas id="occChart"></canvas></div></div>
   </div>
+
+  <div class="card">
+    <div class="card-title">Need dates — soft nights next 45 days <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">· occ below 50%, click for detail</span></div>
+    <div id="need-dates"><div class="loading">Loading...</div></div>
+  </div>
+
   <div class="card"><div class="card-title">Top at-risk groups</div><div id="risk-preview"></div></div>
 </div>
 
@@ -355,6 +387,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="metric-grid">
     <div class="mc"><div class="mc-label">MTD revenue</div><div class="mc-val" id="r-mtd">—</div><div class="mc-delta" id="r-mtdvar">—</div></div>
     <div class="mc"><div class="mc-label">MTD ADR</div><div class="mc-val" id="r-mtd-adr">—</div></div>
+    <div class="mc"><div class="mc-label">MTD RevPAR</div><div class="mc-val" id="r-mtd-revpar">—</div></div>
     <div class="mc"><div class="mc-label">MTD avg occ%</div><div class="mc-val" id="r-mtd-occ">—</div></div>
     <div class="mc"><div class="mc-label">YTD revenue</div><div class="mc-val" id="r-ytd">—</div></div>
     <div class="mc"><div class="mc-label">YTD vs target</div><div class="mc-val" id="r-ytd-var">—</div><div class="mc-delta" id="r-ytd-var-sub">—</div></div>
@@ -371,6 +404,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       <div class="legend"><span><span class="legend-sq" style="background:var(--chart-blue)"></span>Transient</span><span><span class="legend-sq" style="background:var(--chart-green)"></span>Group</span></div>
       <div class="chart-wrap"><canvas id="splitChart"></canvas></div>
     </div>
+  </div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">Day-of-week performance — YTD actuals</div>
+      <div class="legend"><span><span class="legend-sq" style="background:var(--chart-blue)"></span>Avg occ%</span><span><span class="legend-line" style="background:var(--chart-amber)"></span>RevPAR</span></div>
+      <div class="chart-wrap"><canvas id="dowChart"></canvas></div>
+    </div>
+    <div class="card"><div class="card-title">Day-of-week detail</div><div id="dow-tbl"></div></div>
   </div>
 </div>
 
@@ -824,6 +864,7 @@ async function loadAll(){
     calState.events.month=calState.groups.month=calState.rev.month=now.getMonth()+1;
 
     renderKPIs(); renderOverviewRAG(); renderOccChart(); renderRiskPreview();
+    renderOutlook(); renderNeedDates();
     renderPipeMetrics(); filterPipe('risk',document.querySelector('#page-pipeline .ftab.active'));
     renderRevenue(); renderChannels(); renderActions();
     populateNightlySelect();
@@ -869,6 +910,33 @@ function renderKPIs(){
   document.getElementById('k-mtd').textContent=mtdRev>0?fmt(mtdRev):'—';
   const mvEl=document.getElementById('k-mtdvar');
   if(mtdRev>0){mvEl.textContent=(mtdVar>=0?'+':'')+fmt(mtdVar)+' vs target';mvEl.className='mc-delta '+(mtdVar>=0?'up':'down');}
+
+  // RevPAR today + MTD
+  const revparToday=todayRev!=null?todayRev/ROOMS_TOTAL:null;
+  const revparEl=document.getElementById('k-revpar');
+  if(revparEl){
+    revparEl.textContent=revparToday!=null?fmt(revparToday):'—';
+    const rpSub=document.getElementById('k-revpar-sub');
+    if(revTgt!=null&&rpSub){
+      const revparTgt=revTgt/ROOMS_TOTAL;
+      const d=revparToday!=null?revparToday-revparTgt:null;
+      rpSub.textContent=d!=null?((d>=0?'+':'')+fmt(d)+' vs '+fmt(revparTgt)+' target'):('target '+fmt(revparTgt));
+      rpSub.style.color=d!=null?(d>=0?'var(--green)':'var(--red)'):'';
+    }
+  }
+  const mtdDays=mtdRv.filter(r=>r['Date']<=today).length||1;
+  const mtdRevpar=mtdRev>0?mtdRev/(mtdDays*ROOMS_TOTAL):null;
+  const mtdRevparTgt=mtdTgt>0?mtdTgt/(mtdDays*ROOMS_TOTAL):null;
+  const mrpEl=document.getElementById('k-mtd-revpar');
+  if(mrpEl){
+    mrpEl.textContent=mtdRevpar!=null?fmt(mtdRevpar):'—';
+    const mrpSub=document.getElementById('k-mtd-revpar-sub');
+    if(mrpSub&&mtdRevpar!=null&&mtdRevparTgt!=null){
+      const d=mtdRevpar-mtdRevparTgt;
+      mrpSub.textContent=(d>=0?'+':'')+fmt(d)+' vs '+fmt(mtdRevparTgt)+' target';
+      mrpSub.style.color=d>=0?'var(--green)':'var(--red)';
+    } else if(mrpSub){ mrpSub.textContent='revenue ÷ available room-nights'; }
+  }
 
   const atRisk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED').length;
   document.getElementById('k-atrisk').textContent=atRisk;
@@ -917,21 +985,139 @@ function renderOverviewRAG(){
   document.getElementById('rag-overview').innerHTML=html;
 }
 
-// ── OCC CHART ────────────────────────────────────────────────────────────────
+// ── OCC CHART — past 30 actual + next 30 OTB ─────────────────────────────────
 function renderOccChart(){
   const today=getToday();
   const ago=new Date(); ago.setDate(ago.getDate()-30);
+  const fwd=new Date(); fwd.setDate(fwd.getDate()+30);
   const cut=ago.toISOString().slice(0,10);
-  const rows=allFc.filter(r=>r['Date']>=cut&&r['Date']<=today&&n(r['Occ%'])!=null);
+  const fwdStr=fwd.toISOString().slice(0,10);
+  const rows=allFc.filter(r=>r['Date']>=cut&&r['Date']<=fwdStr&&n(r['Occ%'])!=null);
   const labels=rows.map(r=>r['Date'].slice(5));
-  const data=rows.map(r=>Math.round(fixOcc(n(r['Occ%']))*10)/10);
+  const past=rows.map(r=>r['Date']<=today?Math.round(fixOcc(n(r['Occ%']))*10)/10:null);
+  const future=rows.map(r=>r['Date']>=today?Math.round(fixOcc(n(r['Occ%']))*10)/10:null);
   if(charts.occ)charts.occ.destroy();
   charts.occ=new Chart(document.getElementById('occChart'),{
-    type:'line',data:{labels,datasets:[{label:'Occ%',data,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.08)',borderWidth:2,pointRadius:0,fill:true,tension:0.3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
-      scales:{x:{ticks:{maxTicksLimit:8,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
+    type:'line',data:{labels,datasets:[
+      {label:'Actual',data:past,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.08)',borderWidth:2,pointRadius:0,fill:true,tension:0.3},
+      {label:'OTB',data:future,borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.06)',borderWidth:2,borderDash:[5,3],pointRadius:0,fill:true,tension:0.3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+'%'}}},
+      scales:{x:{ticks:{maxTicksLimit:10,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
               y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
+}
+
+// ── 7-DAY OUTLOOK ────────────────────────────────────────────────────────────
+function renderOutlook(){
+  const el=document.getElementById('outlook-7d'); if(!el)return;
+  const today=getToday();
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()+i);days.push(d.toISOString().slice(0,10));}
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  let html='<table class="tbl outlook-tbl"><thead><tr><th>Date</th><th></th><th>Rooms / Goal</th><th>Occ%</th><th>ADR</th><th>BAR</th><th>CS Avg</th><th>Fcst</th><th>Groups in-house</th><th>Signal</th></tr></thead><tbody>';
+  days.forEach(date=>{
+    const fc=allFc.find(r=>r['Date']===date);
+    const rv=allRv.find(r=>r['Date']===date);
+    const ri=allRi.find(r=>r['Date']===date);
+    const ev=allEv.find(r=>r['Date']===date);
+    const dObj=new Date(date+'T12:00:00');
+    const dow=DOW[dObj.getDay()];
+    const isWkd=['Fri','Sat','Sun'].includes(dow);
+    const isToday=date===today;
+
+    const rooms=fc?n(fc['Total Rooms']):null;
+    const goal=rv?n(rv['Rooms Goal']):null;
+    const occ=fc?fixOcc(n(fc['Occ%'])):null;
+    const adr=fc?n(fc['ADR Actual']):null;
+    const bar=fc?n(fc['BAR']):null;
+    const fcst=fc?n(fc['Duetto Forecast Rooms']):null;
+    const cs=ri?calcCSRates(ri):{avg:null};
+    const csDiff=bar!=null&&cs.avg!=null?bar-cs.avg:null;
+
+    // Groups on property tonight (rooms > 0)
+    const grpAgg=aggregateBiByBlockNight(allBi.filter(r=>r['Stay Date']===date)).filter(e=>e.rooms>0);
+    const grpRooms=grpAgg.reduce((s,e)=>s+e.rooms,0);
+
+    const icons=[];
+    if(ev&&ev['Gillette Stadium'])icons.push('🏟');
+    if(ev&&ev['Xfinity Center'])icons.push('🎵');
+    if(ev&&ev['Holiday'])icons.push('🎉');
+
+    const pctGoal=rooms!=null&&goal>0?Math.round(rooms/goal*100):null;
+    const barCol=pctGoal==null?'#888780':pctGoal>=90?'#639922':pctGoal>=70?'#EF9F27':'#E24B4A';
+    const sig=getSignal(cs,bar,occ);
+
+    html+=`<tr onclick="openRevDay('${date}')" style="${isToday?'background:var(--blue-bg)':''}">
+      <td style="font-weight:${isToday?'700':'600'}">${date.slice(5)}<div style="font-size:10px;color:${isWkd?'var(--chart-blue)':'var(--text3)'};font-weight:${isWkd?'700':'400'}">${dow}${isToday?' · today':''}</div></td>
+      <td style="font-size:13px">${icons.join('')}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:600;min-width:54px">${rooms!=null?rooms:'—'}${goal!=null?'/'+goal:''}</span><div class="mini-bar"><div style="width:${Math.min(pctGoal||0,100)}%;background:${barCol}"></div></div></div></td>
+      <td style="font-weight:600;color:${occ!=null&&occ>=80?'var(--green)':occ!=null&&occ<50?'var(--red)':'var(--text)'}">${occ!=null?Math.round(occ)+'%':'—'}</td>
+      <td>${adr!=null?fmt(adr):'—'}</td>
+      <td style="font-weight:600">${bar!=null?fmt(bar):'—'}</td>
+      <td>${cs.avg!=null?fmt(cs.avg):'—'}${csDiff!=null?`<div style="font-size:10px;color:${csDiff>0?'var(--chart-green)':csDiff<0?'var(--red)':'var(--text3)'}">${csDiff>0?'+':''}${Math.round(csDiff)}</div>`:''}</td>
+      <td style="color:var(--text2)">${fcst!=null?Math.round(fcst):'—'}</td>
+      <td>${grpAgg.length?`<span class="chip chip-blue">${grpAgg.length} blk · ${grpRooms} rm</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td><span class="chip" style="background:${sig.bg};color:${sig.color}">${sig.label}</span></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+// ── NEED DATES ───────────────────────────────────────────────────────────────
+function renderNeedDates(){
+  const el=document.getElementById('need-dates'); if(!el)return;
+  const today=getToday();
+  const fwd=new Date(); fwd.setDate(fwd.getDate()+45);
+  const fwdStr=fwd.toISOString().slice(0,10);
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const soft=allFc.filter(r=>{
+    if(!r['Date']||r['Date']<today||r['Date']>fwdStr)return false;
+    const occ=fixOcc(n(r['Occ%']));
+    return occ!=null&&occ<50;
+  }).slice(0,10);
+
+  if(!soft.length){el.innerHTML='<div class="empty">No soft nights under 50% occ in the next 45 days. Strong book.</div>';return;}
+
+  let html='<div style="display:flex;flex-direction:column;gap:5px">';
+  soft.forEach(fc=>{
+    const date=fc['Date'];
+    const occ=fixOcc(n(fc['Occ%']));
+    const rooms=n(fc['Total Rooms']);
+    const bar=n(fc['BAR']);
+    const ri=allRi.find(r=>r['Date']===date);
+    const cs=ri?calcCSRates(ri):{avg:null,min:null};
+    const ev=allEv.find(r=>r['Date']===date);
+    const dObj=new Date(date+'T12:00:00');
+    const dow=DOW[dObj.getDay()];
+    const isWkd=['Fri','Sat','Sun'].includes(dow);
+    const hasEvent=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']);
+
+    // Suggested play
+    let play='Open availability — consider promo or corporate outreach';
+    if(hasEvent) play='Event night under-booked — verify rates are visible on OTAs';
+    else if(isWkd&&cs.avg!=null&&bar!=null&&bar>cs.avg) play='Weekend, priced above comp avg — test a rate move';
+    else if(cs.avg!=null&&bar!=null&&bar<cs.avg) play='Already below comp avg — push channels, not rate';
+
+    const daysOut=Math.round((dObj-new Date(today+'T12:00:00'))/86400000);
+    const chips=[];
+    if(isWkd)chips.push('<span class="chip chip-blue">WKD</span>');
+    if(hasEvent)chips.push('<span class="chip chip-amber">🏟 Event</span>');
+
+    html+=`<div class="need-row" onclick="openRevDay('${date}')">
+      <div><div style="font-weight:700">${date.slice(5)}</div><div style="font-size:10px;color:var(--text3)">${dow} · ${daysOut}d out</div></div>
+      <div>${chips.join('')}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:var(--red)">${Math.round(occ)}%</span><div class="mini-bar"><div style="width:${Math.min(occ,100)}%;background:#E24B4A"></div></div><span style="font-size:11px;color:var(--text2)">${rooms!=null?rooms+'/'+ROOMS_TOTAL:''}</span></div>
+      <div><div style="font-size:10px;color:var(--text2)">Your BAR</div><div style="font-weight:600">${bar!=null?fmt(bar):'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">CS Avg / Min</div><div style="font-weight:500;font-size:11px">${cs.avg!=null?fmt(cs.avg)+' / '+fmt(cs.min):'—'}</div></div>
+      <div style="font-size:11px;color:var(--text2)">${play}</div>
+    </div>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 // ── RISK PREVIEW ─────────────────────────────────────────────────────────────
@@ -1501,6 +1687,9 @@ function renderRevenue(){
     const totR=mtdRows.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0);
     const totRevV=mtdRows.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
     document.getElementById('r-mtd-adr').textContent=totR>0?fmt(totRevV/totR):'—';
+    const mtdDayCount=mtdRows.filter(r=>r['Date']<=getToday()).length||1;
+    const rpEl=document.getElementById('r-mtd-revpar');
+    if(rpEl)rpEl.textContent=totRevV>0?fmt(totRevV/(mtdDayCount*ROOMS_TOTAL)):'—';
     document.getElementById('r-mtd-occ').textContent=mtdD.occ?Math.round(fixOcc(mtdD.occ)*10)/10+'%':'—';
   }
   const pastMos=moData.filter(d=>d.mo<thisMonth&&d.rev);
@@ -1524,17 +1713,71 @@ function renderRevenue(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
-  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Occ%</th></tr></thead><tbody>';
+  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
   moData.forEach(d=>{
     const vd=(d.rev&&d.tgt&&d.tgt>1000)?d.rev-d.tgt:null;
     const vp=vd&&d.tgt?Math.round(vd/d.tgt*100):null;
     const occ=d.occ?Math.round(fixOcc(d.occ)*10)/10:null;
     const sfx=d.mo===thisMonth?' (MTD)':d.mo<thisMonth?' ✓':'';
+    const dim=new Date(parseInt(d.mo.slice(0,4)),parseInt(d.mo.slice(5)),0).getDate();
+    const revpar=d.rev?d.rev/(dim*ROOMS_TOTAL):null;
     tbl+=`<tr><td style="font-weight:600">${moLabel(d.mo)}${sfx}</td><td>${fmt(d.rev)}</td><td>${fmt(d.tgt)}</td>
       <td class="${vd==null?'':vd>=0?'up':'down'}">${vd!=null?(vd>=0?'+':'')+fmt(vd)+' ('+(vp>=0?'+':'')+vp+'%)':'—'}</td>
-      <td>${occ!=null?occ+'%':'—'}</td></tr>`;
+      <td>${occ!=null?occ+'%':'—'}</td>
+      <td style="font-weight:600">${revpar!=null?fmt(revpar):'—'}</td></tr>`;
   });
   tbl+='</tbody></table>'; document.getElementById('monthly-tbl').innerHTML=tbl;
+
+  renderDOW();
+}
+
+// ── DAY-OF-WEEK ANALYSIS ─────────────────────────────────────────────────────
+function renderDOW(){
+  const today=getToday();
+  const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dowIdx=d=>{const i=new Date(d+'T12:00:00').getDay();return i===0?6:i-1;} // Mon=0
+  const buckets=DOW.map(()=>({days:0,rooms:0,rev:0}));
+  allRv.filter(r=>r['Date']&&r['Date']<=today&&r['Date']>='2026-01-01').forEach(r=>{
+    const i=dowIdx(r['Date']);
+    const rooms=n(r['Total Rooms'])||0; const rev=n(r['Room Revenue'])||0;
+    if(rooms>0||rev>0){buckets[i].days++;buckets[i].rooms+=rooms;buckets[i].rev+=rev;}
+  });
+  const occs=buckets.map(b=>b.days>0?Math.round(b.rooms/(b.days*ROOMS_TOTAL)*1000)/10:null);
+  const revpars=buckets.map(b=>b.days>0?b.rev/(b.days*ROOMS_TOTAL):null);
+  const adrs=buckets.map(b=>b.rooms>0?b.rev/b.rooms:null);
+
+  const cv=document.getElementById('dowChart');
+  if(cv){
+    if(charts.dow)charts.dow.destroy();
+    charts.dow=new Chart(cv,{
+      data:{labels:DOW,datasets:[
+        {type:'bar',label:'Avg occ%',data:occs,backgroundColor:'#378ADD',borderRadius:3,yAxisID:'y'},
+        {type:'line',label:'RevPAR',data:revpars.map(v=>v?Math.round(v):null),borderColor:'#EF9F27',borderWidth:2,pointRadius:3,fill:false,tension:0.2,yAxisID:'y1'},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.dataset.yAxisID==='y'?c.parsed.y+'%':fmt(c.parsed.y))}}},
+        scales:{x:{ticks:{font:{size:11},color:'#888780'},grid:{display:false}},
+                y:{min:0,max:100,position:'left',ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},
+                y1:{position:'right',ticks:{callback:v=>'$'+v,font:{size:10},color:'#EF9F27'},grid:{display:false}}}}
+    });
+  }
+
+  const el=document.getElementById('dow-tbl');
+  if(el){
+    // Find best and worst day
+    let best=-1,worst=-1;
+    revpars.forEach((v,i)=>{if(v!=null){if(best<0||v>revpars[best])best=i;if(worst<0||v<revpars[worst])worst=i;}});
+    let html='<table class="tbl"><thead><tr><th>Day</th><th>Avg occ%</th><th>ADR</th><th>RevPAR</th><th></th></tr></thead><tbody>';
+    DOW.forEach((d,i)=>{
+      const tag=i===best?'<span class="chip chip-green">Best</span>':i===worst?'<span class="chip chip-red">Weakest</span>':'';
+      html+=`<tr><td style="font-weight:600">${d}</td>
+        <td>${occs[i]!=null?occs[i]+'%':'—'}</td>
+        <td>${adrs[i]!=null?fmt(adrs[i]):'—'}</td>
+        <td style="font-weight:700">${revpars[i]!=null?fmt(revpars[i]):'—'}</td>
+        <td>${tag}</td></tr>`;
+    });
+    html+='</tbody></table>';
+    el.innerHTML=html;
+  }
 }
 
 // ── CHANNELS ─────────────────────────────────────────────────────────────────
@@ -1976,7 +2219,7 @@ function openRevDay(dateStr){
 function renderActions(){
   const today=getToday(); const thisMonth=getThisMonth();
   const actions=[];
-  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED');
+  const risk=allPi.filter(r=>r['At Risk?']==='YES'&&effectiveStatus(r)!=='LOS'&&effectiveStatus(r)!=='COMPLETED'&&effectiveStatus(r)!=='DIED');
   if(risk.length){
     const riskRooms=risk.reduce((s,r)=>s+(n(r['Rooms Available'])||0),0);
     actions.push({pri:1,icon:'ti-alert-triangle',color:'var(--red)',
@@ -2018,6 +2261,46 @@ function renderActions(){
     desc:ten.map(r=>r['Block Name']).join(', '),
     action:'Follow up to convert TEN → DEF. If unlikely, release blocks for transient.'
   });
+
+  // Soft nights in next 30 days
+  const fwd30=new Date(); fwd30.setDate(fwd30.getDate()+30);
+  const fwd30Str=fwd30.toISOString().slice(0,10);
+  const softNights=allFc.filter(r=>{
+    if(!r['Date']||r['Date']<today||r['Date']>fwd30Str)return false;
+    const occ=fixOcc(n(r['Occ%']));
+    return occ!=null&&occ<45;
+  });
+  if(softNights.length>=3){
+    const wkdSoft=softNights.filter(r=>{const d=new Date(r['Date']+'T12:00:00').getDay();return d===5||d===6||d===0;});
+    actions.push({pri:2,icon:'ti-calendar-down',color:'var(--amber)',
+      title:`${softNights.length} soft night${softNights.length>1?'s':''} under 45% occ in the next 30 days${wkdSoft.length?` (${wkdSoft.length} weekend)`:''}`,
+      desc:softNights.slice(0,6).map(r=>`<b>${r['Date'].slice(5)}</b> — ${Math.round(fixOcc(n(r['Occ%'])))}% occ, ${n(r['Total Rooms'])||0} rooms`).join('<br>'),
+      action:'See Need Dates on the Overview tab. Consider targeted promos, corporate outreach, or rate adjustments for these dates.'
+    });
+  }
+
+  // Rate positioning: high-occ dates in next 14d priced at/below comp avg → push opportunity
+  if(allRi.length){
+    const fwd14=new Date(); fwd14.setDate(fwd14.getDate()+14);
+    const fwd14Str=fwd14.toISOString().slice(0,10);
+    const pushDates=[];
+    allFc.filter(r=>r['Date']&&r['Date']>=today&&r['Date']<=fwd14Str).forEach(fc=>{
+      const occ=fixOcc(n(fc['Occ%'])); const bar=n(fc['BAR']);
+      if(occ==null||bar==null||occ<80)return;
+      const ri=allRi.find(r=>r['Date']===fc['Date']);
+      if(!ri)return;
+      const cs=calcCSRates(ri);
+      if(cs.avg!=null&&bar<cs.avg+15) pushDates.push({date:fc['Date'],occ,bar,csAvg:cs.avg});
+    });
+    if(pushDates.length){
+      actions.push({pri:2,icon:'ti-trending-up',color:'var(--green)',
+        title:`${pushDates.length} high-demand night${pushDates.length>1?'s':''} in next 14 days with room to push rate`,
+        desc:pushDates.slice(0,5).map(p=>`<b>${p.date.slice(5)}</b> — ${Math.round(p.occ)}% occ, BAR ${fmt(p.bar)} vs CS avg ${fmt(p.csAvg)}`).join('<br>'),
+        action:'Occupancy ≥80% but BAR is at or near comp avg. Test rate increases — demand supports it.'
+      });
+    }
+  }
+
   const priLabel={1:'Priority 1 — Urgent',2:'Priority 2 — This week',3:'Priority 3 — Parallel track'};
   const priClass={1:'pri-1',2:'pri-2',3:'pri-3'};
   if(!actions.length){document.getElementById('action-list').innerHTML='<div class="empty">No urgent actions flagged. All groups tracking well.</div>';return;}
