@@ -187,6 +187,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('revenue',this)"><i class="ti ti-chart-bar"></i> Revenue</button>
   <button class="nav-tab" onclick="showPage('channels',this)"><i class="ti ti-sitemap"></i> Channels</button>
   <button class="nav-tab" onclick="showPage('comp-rates',this)"><i class="ti ti-trending-up"></i> Comp Rates</button>
+  <button class="nav-tab" onclick="showPage('pace',this)"><i class="ti ti-chart-arrows"></i> Pace</button>
   <button class="nav-tab" onclick="showPage('grp-roomtype',this)"><i class="ti ti-bed"></i> Group Rooms</button>
   <button class="nav-tab" onclick="showPage('roomtype-dive',this)"><i class="ti ti-layout-grid"></i> Room Mix</button>
   <button class="nav-tab" onclick="showPage('events-cal',this)"><i class="ti ti-calendar-event"></i> Events cal</button>
@@ -434,6 +435,86 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     </div>
   </div>
   <div class="card"><div class="card-title">Channel detail</div><div id="chan-detail"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PACE — booking curves & rate elasticity -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-pace">
+  <div class="metric-grid" id="pace-kpis"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+    <div class="tab-row" style="margin-bottom:0">
+      <button class="ftab active" onclick="paceTab('curve',this)"><i class="ti ti-chart-line" style="font-size:11px"></i> Booking Curve</button>
+      <button class="ftab" onclick="paceTab('compare',this)"><i class="ti ti-arrows-diff" style="font-size:11px"></i> Compare Dates</button>
+      <button class="ftab" onclick="paceTab('table',this)"><i class="ti ti-table" style="font-size:11px"></i> All Dates</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <select id="pace-date" onchange="paceSelect(this.value)" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;min-width:190px"></select>
+      <button class="ftab" id="pace-demo-btn" onclick="togglePaceDemo()" title="Simulated booking curves for when the live log is still sparse">Demo mode</button>
+    </div>
+  </div>
+
+  <!-- Curve panel -->
+  <div id="pacepanel-curve">
+    <div class="card">
+      <div class="card-title">Booking curve + rate overlay <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)" id="pace-curve-sub">· rooms accumulating toward arrival, BAR overlaid, rate changes marked</span></div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:#378ADD"></span>OTB rooms</span>
+        <span><span class="legend-line" style="background:#EF9F27"></span>BAR</span>
+        <span><span class="legend-line" style="background:#888780"></span>Capacity</span>
+        <span style="color:#639922">▲ rate raised</span>
+        <span style="color:#E24B4A">▼ rate dropped</span>
+      </div>
+      <div class="chart-wrap-xl"><canvas id="paceCurveChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Daily pickup velocity <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">· rooms added each day, aligned with chart above</span></div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:#639922"></span>Strong (&gt;5)</span>
+        <span><span class="legend-sq" style="background:#378ADD"></span>Moderate (2–5)</span>
+        <span><span class="legend-sq" style="background:#888780"></span>Weak (&lt;2)</span>
+        <span><span class="legend-sq" style="background:#E24B4A"></span>Negative (cancels)</span>
+      </div>
+      <div class="chart-wrap"><canvas id="paceVelChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Compare panel -->
+  <div id="pacepanel-compare" style="display:none">
+    <div class="card">
+      <div class="card-title">Pace comparison — up to 3 dates on one curve</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+        <select id="pace-cmp-1" onchange="renderPaceCompare()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;min-width:170px"></select>
+        <select id="pace-cmp-2" onchange="renderPaceCompare()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;min-width:170px"></select>
+        <select id="pace-cmp-3" onchange="renderPaceCompare()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;min-width:170px"></select>
+      </div>
+      <div class="legend">
+        <span><span class="legend-line" style="background:#378ADD"></span>Date 1</span>
+        <span><span class="legend-line" style="background:#639922"></span>Date 2</span>
+        <span><span class="legend-line" style="background:#EF9F27"></span>Date 3</span>
+      </div>
+      <div class="chart-wrap-xl"><canvas id="paceCmpChart"></canvas></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">X-axis is days before arrival — curves align by lead time, so an event night and a normal night can be compared at the same booking-window point.</div>
+    </div>
+  </div>
+
+  <!-- Table panel -->
+  <div id="pacepanel-table" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text2)">Sort:</span>
+        <select id="pace-sort" onchange="renderPaceTable()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+          <option value="date">Stay date</option>
+          <option value="occ">Occ% ↑ (weakest first)</option>
+          <option value="p7">7-day pickup ↓</option>
+          <option value="left">Days left ↑</option>
+        </select>
+        <span style="font-size:11px;color:var(--text3)">Click any row to open its booking curve</span>
+      </div>
+      <div style="overflow-x:auto"><div id="pace-table"></div></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -772,7 +853,7 @@ const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07'
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
 
 const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[];
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[], allPl=[];
 let pipeCurrentMode='risk';
 
 // Calendar state
@@ -791,6 +872,7 @@ function showPage(id,btn){
   if(id==='comp-rates') renderCompRates();
   if(id==='grp-roomtype') renderGrpRoomType();
   if(id==='roomtype-dive') renderRoomTypeDive();
+  if(id==='pace') renderPace();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -860,6 +942,9 @@ async function loadAll(){
     allFc=toRows(fcV); allRv=toRows(rvV); allCh=toRows(chV);
     allPi=toRows(piV); allMo=toRows(moV).map(r=>({...r,_mo:normMonth(r['Month'])})).filter(r=>r._mo);
     allEv=toRows(evV); allBi=toRows(biV); allRi=toRows(riV); allRt=toRows(rtV);
+
+    // Pickup Log — optional; pace tab degrades to demo mode if missing
+    try{ allPl=toRows(await fetchTab(HUB,'Pickup Log')); }catch(e){ allPl=[]; console.warn('Pickup Log not available:',e.message); }
 
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
@@ -1730,6 +1815,8 @@ function renderRevenue(){
       scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
   let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Rooms / Goal</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
+  // accumulate totals for the bottom row
+  let tRev=0,tTgt=0,tRooms=0,tGoal=0,tDays=0;
   moData.forEach(d=>{
     const vd=(d.rev&&d.tgt&&d.tgt>1000)?d.rev-d.tgt:null;
     const vp=vd&&d.tgt?Math.round(vd/d.tgt*100):null;
@@ -1740,12 +1827,30 @@ function renderRevenue(){
     // Rooms goal for the month from Daily Revenue
     const moGoal=allRv.filter(r=>r['Date']&&r['Date'].startsWith(d.mo)).reduce((s,r)=>s+(n(r['Rooms Goal'])||0),0);
     const rgVar=(d.rooms!=null&&moGoal>0)?d.rooms-moGoal:null;
+    tRev+=(d.rev||0); tTgt+=(d.tgt||0); tRooms+=(d.rooms||0); tGoal+=moGoal; tDays+=dim;
     tbl+=`<tr><td style="font-weight:600">${moLabel(d.mo)}${sfx}</td><td>${fmt(d.rev)}</td><td>${fmt(d.tgt)}</td>
       <td class="${vd==null?'':vd>=0?'up':'down'}">${vd!=null?(vd>=0?'+':'')+fmt(vd)+' ('+(vp>=0?'+':'')+vp+'%)':'—'}</td>
       <td><span style="font-weight:600">${d.rooms!=null?Math.round(d.rooms).toLocaleString():'—'}</span>${moGoal>0?'<span style="color:var(--text2)"> / '+moGoal.toLocaleString()+'</span>':''}${rgVar!=null?`<div style="font-size:10px;color:${rgVar>=0?'var(--green)':'var(--red)'}">${rgVar>=0?'+':''}${rgVar.toLocaleString()}</div>`:''}</td>
       <td>${occ!=null?occ+'%':'—'}</td>
       <td style="font-weight:600">${revpar!=null?fmt(revpar):'—'}</td></tr>`;
   });
+  // Total row
+  {
+    const tVd=tTgt>1000?tRev-tTgt:null;
+    const tVp=tVd!=null&&tTgt>0?Math.round(tVd/tTgt*100):null;
+    const tRgVar=tGoal>0?Math.round(tRooms)-tGoal:null;
+    const tOcc=tDays>0?Math.round(tRooms/(tDays*ROOMS_TOTAL)*1000)/10:null;
+    const tRevpar=tDays>0&&tRev>0?tRev/(tDays*ROOMS_TOTAL):null;
+    tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
+      <td style="font-weight:700">Total</td>
+      <td style="font-weight:700">${tRev>0?fmt(tRev):'—'}</td>
+      <td style="font-weight:700">${tTgt>0?fmt(tTgt):'—'}</td>
+      <td style="font-weight:700" class="${tVd==null?'':tVd>=0?'up':'down'}">${tVd!=null?(tVd>=0?'+':'')+fmt(tVd)+' ('+(tVp>=0?'+':'')+tVp+'%)':'—'}</td>
+      <td><span style="font-weight:700">${Math.round(tRooms).toLocaleString()}</span>${tGoal>0?'<span style="color:var(--text2)"> / '+tGoal.toLocaleString()+'</span>':''}${tRgVar!=null?`<div style="font-size:10px;color:${tRgVar>=0?'var(--green)':'var(--red)'}">${tRgVar>=0?'+':''}${tRgVar.toLocaleString()}</div>`:''}</td>
+      <td style="font-weight:700">${tOcc!=null?tOcc+'%':'—'}</td>
+      <td style="font-weight:700">${tRevpar!=null?fmt(tRevpar):'—'}</td>
+    </tr>`;
+  }
   tbl+='</tbody></table>'; document.getElementById('monthly-tbl').innerHTML=tbl;
 
   renderDOW();
@@ -3006,6 +3111,313 @@ function renderRtdDetail(){
   });
   html+='</tbody></table>';
   document.getElementById('rtd-detail-tbl').innerHTML=html;
+}
+
+// ── PACE — booking curves & rate elasticity ──────────────────────────────────
+// Source: Pickup Log (one row per stay date per daily snapshot)
+let paceDemoMode=false, paceSelDate=null, paceCurrentTab='curve';
+
+function paceTab(tab,btn){
+  paceCurrentTab=tab;
+  document.querySelectorAll('#page-pace .tab-row .ftab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  ['curve','compare','table'].forEach(p=>document.getElementById('pacepanel-'+p).style.display=tab===p?'':'none');
+  if(tab==='curve') renderPaceCurve();
+  if(tab==='compare'){populatePaceCompare();renderPaceCompare();}
+  if(tab==='table') renderPaceTable();
+}
+
+function togglePaceDemo(){
+  paceDemoMode=!paceDemoMode;
+  document.getElementById('pace-demo-btn').classList.toggle('active',paceDemoMode);
+  paceSelDate=null;
+  renderPace();
+}
+
+// Demo scenarios from the prototype spec — used while live log is sparse
+const PACE_DEMO=(()=>{
+  function build(start,steps){
+    const rows=[]; let otb=start; let seed=7;
+    const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+    steps.forEach(s=>{for(let dba=s.from;dba>=s.to;dba--){
+      otb=Math.max(0,Math.min(otb+s.v+Math.round((rnd()-0.4)*s.j),140));
+      rows.push({dba,otb:Math.round(otb),bar:s.bar});
+    }});
+    return rows;
+  }
+  return {
+    'World Cup Jun 21 (demo)':build(8,[
+      {from:60,to:46,v:2,j:2,bar:299},{from:45,to:31,v:3,j:2,bar:339},
+      {from:30,to:16,v:3,j:3,bar:379},{from:15,to:0,v:2,j:2,bar:419}]),
+    'Kid Rock concert (demo)':build(5,[
+      {from:55,to:41,v:1,j:2,bar:199},{from:40,to:21,v:2,j:2,bar:229},
+      {from:20,to:0,v:2,j:2,bar:259}]),
+    'Jul 4 — rate raised too fast (demo)':build(10,[
+      {from:60,to:46,v:2,j:2,bar:219},{from:45,to:36,v:2,j:1,bar:289},
+      {from:35,to:26,v:0,j:1,bar:289},{from:25,to:11,v:2,j:2,bar:239},
+      {from:10,to:0,v:3,j:2,bar:239}]),
+    'Soft weekday — chasing volume (demo)':build(4,[
+      {from:45,to:36,v:0,j:1,bar:189},{from:35,to:26,v:1,j:1,bar:159},
+      {from:25,to:11,v:1,j:2,bar:139},{from:10,to:0,v:2,j:2,bar:129}]),
+  };
+})();
+
+// Rows for one stay date, earliest snapshot first (DBA descending)
+function paceRowsFor(key){
+  if(paceDemoMode) return PACE_DEMO[key]||[];
+  return allPl.filter(r=>r['Stay Date']===key)
+    .map(r=>({dba:n(r['Days Before Arrival']),otb:n(r['OTB Rooms'])||0,bar:n(r['BAR']),snap:r['Snapshot Date']}))
+    .filter(r=>r.dba!=null)
+    .sort((a,b)=>b.dba-a.dba);
+}
+
+function paceDates(){
+  if(paceDemoMode) return Object.keys(PACE_DEMO);
+  const counts={};
+  allPl.forEach(r=>{const d=r['Stay Date'];if(d)counts[d]=(counts[d]||0)+1;});
+  return Object.keys(counts).filter(d=>counts[d]>=3).sort();
+}
+
+function paceVelocity(rows){
+  return rows.map((r,i)=>i===0?null:r.otb-rows[i-1].otb);
+}
+function paceRateMarks(rows){
+  const marks=[];
+  rows.forEach((r,i)=>{
+    if(i>0&&r.bar!=null&&rows[i-1].bar!=null&&r.bar!==rows[i-1].bar)
+      marks.push({idx:i,bar:r.bar,up:r.bar>rows[i-1].bar});
+  });
+  return marks;
+}
+function paceMarkerPlugin(marks){
+  return {id:'paceMarks',afterDatasetsDraw(c){
+    const {ctx,chartArea:a,scales}=c; if(!scales.x)return;
+    marks.forEach((m,k)=>{
+      const x=scales.x.getPixelForValue(m.idx);
+      if(x<a.left||x>a.right)return;
+      ctx.save();
+      ctx.strokeStyle=m.up?'rgba(99,153,34,0.85)':'rgba(226,75,74,0.85)';
+      ctx.setLineDash([4,3]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,a.top); ctx.lineTo(x,a.bottom); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=m.up?'#639922':'#E24B4A';
+      ctx.font='600 10px -apple-system,system-ui,sans-serif';
+      ctx.fillText((m.up?'▲ $':'▼ $')+Math.round(m.bar), x+3, a.top+11+(k%3)*12);
+      ctx.restore();
+    });
+  }};
+}
+
+function paceSelect(key){
+  paceSelDate=key;
+  const sel=document.getElementById('pace-date');
+  if(sel&&sel.value!==key)sel.value=key;
+  // jump to curve tab
+  if(paceCurrentTab!=='curve'){
+    const btn=document.querySelector('#page-pace .tab-row .ftab');
+    paceTab('curve',btn);
+  }
+  renderPaceKPIs(); renderPaceCurve();
+}
+
+function renderPace(){
+  const dates=paceDates();
+  const sel=document.getElementById('pace-date');
+  if(!dates.length&&!paceDemoMode){
+    document.getElementById('pace-kpis').innerHTML='<div class="empty" style="grid-column:1/-1">Pickup Log is empty or has fewer than 3 snapshots per date. The log started Jun 11 — curves build daily. Use <b>Demo mode</b> to preview the tool.</div>';
+    sel.innerHTML='<option>No tracked dates yet</option>';
+    if(charts.paceCurve)charts.paceCurve.destroy();
+    if(charts.paceVel)charts.paceVel.destroy();
+    document.getElementById('pace-table').innerHTML='';
+    return;
+  }
+  // populate selector grouped by month (real) or flat (demo)
+  if(paceDemoMode){
+    sel.innerHTML=dates.map(d=>`<option value="${d}">${d}</option>`).join('');
+  } else {
+    const byMo={};
+    dates.forEach(d=>{const mo=d.slice(0,7);(byMo[mo]=byMo[mo]||[]).push(d);});
+    sel.innerHTML=Object.keys(byMo).sort().map(mo=>
+      `<optgroup label="${MN_FULL[mo.slice(5)]||mo} ${mo.slice(0,4)}">`+
+      byMo[mo].map(d=>{
+        const ev=allEv.find(e=>e['Date']===d);
+        const tag=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday'])?' 🏟':'';
+        return `<option value="${d}">${d}${tag}</option>`;
+      }).join('')+'</optgroup>').join('');
+  }
+  if(!paceSelDate||!dates.includes(paceSelDate))paceSelDate=dates[0];
+  sel.value=paceSelDate;
+  renderPaceKPIs();
+  if(paceCurrentTab==='curve')renderPaceCurve();
+  if(paceCurrentTab==='compare'){populatePaceCompare();renderPaceCompare();}
+  if(paceCurrentTab==='table')renderPaceTable();
+}
+
+function renderPaceKPIs(){
+  const el=document.getElementById('pace-kpis');
+  const rows=paceRowsFor(paceSelDate);
+  if(!rows.length){el.innerHTML='';return;}
+  const latest=rows[rows.length-1];
+  const occ=latest.otb/ROOMS_TOTAL*100;
+  const idx7=rows.length-1-7, idx30=rows.length-1-30;
+  const p7=idx7>=0?latest.otb-rows[idx7].otb:null;
+  const p30=idx30>=0?latest.otb-rows[idx30].otb:null;
+  const marks=paceRateMarks(rows);
+  const ev=!paceDemoMode?allEv.find(e=>e['Date']===paceSelDate):null;
+  const evName=ev?(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||''):'';
+  const fc=!paceDemoMode?allFc.find(r=>r['Date']===paceSelDate):null;
+  const duettoFcst=fc?n(fc['Duetto Forecast Rooms']):null;
+  const dow=!paceDemoMode&&/^\d{4}-\d{2}-\d{2}$/.test(paceSelDate)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(paceSelDate+'T12:00:00').getDay()]:'';
+
+  el.innerHTML=`
+    <div class="mc"><div class="mc-label">Stay date</div><div class="mc-val" style="font-size:16px">${paceSelDate}</div><div class="mc-sub">${dow}${evName?' · 🏟 '+evName:''}</div></div>
+    <div class="mc"><div class="mc-label">Current OTB</div><div class="mc-val">${latest.otb}</div><div class="mc-sub">${latest.dba} days to arrival</div></div>
+    <div class="mc"><div class="mc-label">Occ%</div><div class="mc-val" style="color:${occ>=70?'var(--green)':occ<40?'var(--red)':'var(--amber)'}">${Math.round(occ)}%</div><div class="mc-sub">of ${ROOMS_TOTAL} rooms</div></div>
+    <div class="mc"><div class="mc-label">Current BAR</div><div class="mc-val">${latest.bar!=null?fmt(latest.bar):'—'}</div></div>
+    <div class="mc"><div class="mc-label">7-day pickup</div><div class="mc-val" style="color:${p7!=null&&p7>0?'var(--green)':p7!=null&&p7<0?'var(--red)':'var(--text)'}">${p7!=null?(p7>=0?'+':'')+p7:'—'}</div><div class="mc-sub">rooms in last 7 snapshots</div></div>
+    <div class="mc"><div class="mc-label">30-day pickup</div><div class="mc-val">${p30!=null?(p30>=0?'+':'')+p30:'—'}</div><div class="mc-sub">${idx30<0?'log too young':'rooms in last 30 snapshots'}</div></div>
+    <div class="mc"><div class="mc-label">Rate changes</div><div class="mc-val">${marks.length}</div><div class="mc-sub">${marks.filter(m=>m.up).length} up · ${marks.filter(m=>!m.up).length} down</div></div>
+    ${duettoFcst!=null?`<div class="mc"><div class="mc-label">Duetto forecast</div><div class="mc-val">${Math.round(duettoFcst)}</div><div class="mc-sub">predicted final rooms</div></div>`:''}`;
+}
+
+function renderPaceCurve(){
+  const rows=paceRowsFor(paceSelDate);
+  const cvC=document.getElementById('paceCurveChart');
+  const cvV=document.getElementById('paceVelChart');
+  if(!rows.length){if(charts.paceCurve)charts.paceCurve.destroy();if(charts.paceVel)charts.paceVel.destroy();return;}
+
+  const labels=rows.map(r=>r.dba);
+  const otb=rows.map(r=>r.otb);
+  const bar=rows.map(r=>r.bar);
+  const vel=paceVelocity(rows);
+  const marks=paceRateMarks(rows);
+  const maxBar=Math.max(...bar.filter(v=>v!=null),100);
+
+  if(charts.paceCurve)charts.paceCurve.destroy();
+  charts.paceCurve=new Chart(cvC,{
+    data:{labels,datasets:[
+      {type:'line',label:'OTB',data:otb,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.10)',borderWidth:2.5,pointRadius:0,pointHitRadius:8,fill:true,tension:0.25,yAxisID:'y',order:2},
+      {type:'line',label:'Capacity',data:labels.map(()=>ROOMS_TOTAL),borderColor:'rgba(136,135,128,0.5)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,yAxisID:'y',order:3},
+      {type:'line',label:'BAR',data:bar,borderColor:'#EF9F27',borderWidth:2,borderDash:[5,3],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:1},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:items=>'DBA '+items[0].label+' days',
+        label:c=>{
+          if(c.dataset.label==='Capacity')return null;
+          if(c.dataset.label==='BAR')return 'BAR: '+fmt(c.parsed.y);
+          const v=vel[c.dataIndex];
+          return 'OTB: '+c.parsed.y+' rooms'+(v!=null?' ('+(v>=0?'+':'')+v+' that day)':'');
+        }}}},
+      scales:{
+        x:{title:{display:true,text:'Days before arrival →',font:{size:10},color:'#888780'},ticks:{maxTicksLimit:14,font:{size:10},color:'#888780'},grid:{display:false}},
+        y:{min:0,suggestedMax:ROOMS_TOTAL+10,position:'left',title:{display:true,text:'Rooms',font:{size:10},color:'#378ADD'},ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},
+        y1:{position:'right',suggestedMax:maxBar*1.15,title:{display:true,text:'BAR $',font:{size:10},color:'#EF9F27'},ticks:{callback:v=>'$'+v,font:{size:10},color:'#EF9F27'},grid:{display:false}}
+      }},
+    plugins:[paceMarkerPlugin(marks)]
+  });
+
+  const velColors=vel.map(v=>v==null?'rgba(0,0,0,0)':v<0?'#E24B4A':v>5?'#639922':v>=2?'#378ADD':'#888780');
+  if(charts.paceVel)charts.paceVel.destroy();
+  charts.paceVel=new Chart(cvV,{
+    type:'bar',
+    data:{labels,datasets:[{label:'Pickup',data:vel,backgroundColor:velColors,borderRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:items=>'DBA '+items[0].label+' days',
+        label:c=>c.parsed.y!=null?(c.parsed.y>=0?'+':'')+c.parsed.y+' rooms':'—'}}},
+      scales:{
+        x:{ticks:{maxTicksLimit:14,font:{size:10},color:'#888780'},grid:{display:false}},
+        y:{title:{display:true,text:'Rooms/day',font:{size:10},color:'#888780'},ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}
+      }},
+    plugins:[paceMarkerPlugin(marks)]
+  });
+}
+
+function populatePaceCompare(){
+  const dates=paceDates();
+  ['pace-cmp-1','pace-cmp-2','pace-cmp-3'].forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— none —</option>'+dates.map(d=>`<option value="${d}">${d}</option>`).join('');
+    if(cur&&dates.includes(cur))sel.value=cur;
+    else if(i===0&&paceSelDate)sel.value=paceSelDate;
+  });
+}
+
+function renderPaceCompare(){
+  const colors=['#378ADD','#639922','#EF9F27'];
+  const datasets=[];
+  ['pace-cmp-1','pace-cmp-2','pace-cmp-3'].forEach((id,i)=>{
+    const key=document.getElementById(id).value;
+    if(!key)return;
+    const rows=paceRowsFor(key);
+    if(!rows.length)return;
+    datasets.push({
+      label:key,
+      data:rows.map(r=>({x:r.dba,y:r.otb})),
+      borderColor:colors[i],borderWidth:2.5,pointRadius:0,pointHitRadius:8,fill:false,tension:0.25
+    });
+  });
+  if(charts.paceCmp)charts.paceCmp.destroy();
+  if(!datasets.length)return;
+  charts.paceCmp=new Chart(document.getElementById('paceCmpChart'),{
+    type:'line',
+    data:{datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{labels:{font:{size:11},color:'#888780'}},tooltip:{callbacks:{
+        title:items=>'DBA '+items[0].parsed.x+' days',
+        label:c=>c.dataset.label+': '+c.parsed.y+' rooms'}}},
+      scales:{
+        x:{type:'linear',reverse:true,title:{display:true,text:'Days before arrival →',font:{size:10},color:'#888780'},ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+        y:{min:0,suggestedMax:ROOMS_TOTAL+10,title:{display:true,text:'OTB rooms',font:{size:10},color:'#888780'},ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}
+      }}
+  });
+}
+
+function renderPaceTable(){
+  const el=document.getElementById('pace-table');
+  const dates=paceDates();
+  if(!dates.length){el.innerHTML='<div class="empty">No tracked dates.</div>';return;}
+  const sortMode=document.getElementById('pace-sort')?.value||'date';
+
+  const entries=dates.map(d=>{
+    const rows=paceRowsFor(d);
+    const latest=rows[rows.length-1];
+    const idx7=rows.length-1-7;
+    const p7=idx7>=0?latest.otb-rows[idx7].otb:null;
+    const idx30=rows.length-1-30;
+    const p30=idx30>=0?latest.otb-rows[idx30].otb:null;
+    const ev=!paceDemoMode?allEv.find(e=>e['Date']===d):null;
+    const marks=paceRateMarks(rows);
+    return{date:d,otb:latest.otb,occ:latest.otb/ROOMS_TOTAL*100,bar:latest.bar,dba:latest.dba,p7,p30,
+      evName:ev?(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||''):'',rateChanges:marks.length,snaps:rows.length};
+  });
+
+  entries.sort((a,b)=>{
+    if(sortMode==='occ')return a.occ-b.occ;
+    if(sortMode==='p7')return (b.p7||-99)-(a.p7||-99);
+    if(sortMode==='left')return a.dba-b.dba;
+    return a.date.localeCompare(b.date);
+  });
+
+  let html='<table class="tbl"><thead><tr><th style="padding:8px 14px">Stay date</th><th>Event</th><th>Days left</th><th>OTB</th><th>Occ%</th><th>BAR</th><th>7-day pickup</th><th>30-day pickup</th><th>Rate changes</th></tr></thead><tbody>';
+  entries.forEach(e=>{
+    const occCol=e.occ>=70?'var(--green)':e.occ>=40?'var(--amber)':'var(--red)';
+    html+=`<tr onclick="paceSelect('${e.date}')" style="cursor:pointer">
+      <td style="padding:9px 14px;font-weight:600">${e.date}<div style="font-size:10px;color:var(--text3)">${e.snaps} snapshots</div></td>
+      <td style="font-size:11px;color:var(--text2)">${e.evName||'—'}</td>
+      <td>${e.dba}d</td>
+      <td style="font-weight:600">${e.otb}</td>
+      <td style="font-weight:700;color:${occCol}">${Math.round(e.occ)}%</td>
+      <td>${e.bar!=null?fmt(e.bar):'—'}</td>
+      <td style="font-weight:600;color:${e.p7!=null&&e.p7>0?'var(--green)':e.p7!=null&&e.p7<0?'var(--red)':'var(--text2)'}">${e.p7!=null?(e.p7>=0?'+':'')+e.p7:'—'}</td>
+      <td>${e.p30!=null?(e.p30>=0?'+':'')+e.p30:'—'}</td>
+      <td>${e.rateChanges>0?`<span class="chip chip-blue">${e.rateChanges}</span>`:'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
 }
 
 loadAll();
