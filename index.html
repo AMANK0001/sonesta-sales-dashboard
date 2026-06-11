@@ -389,6 +389,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="mc"><div class="mc-label">MTD ADR</div><div class="mc-val" id="r-mtd-adr">—</div></div>
     <div class="mc"><div class="mc-label">MTD RevPAR</div><div class="mc-val" id="r-mtd-revpar">—</div></div>
     <div class="mc"><div class="mc-label">MTD avg occ%</div><div class="mc-val" id="r-mtd-occ">—</div></div>
+    <div class="mc"><div class="mc-label">MTD rooms vs goal</div><div class="mc-val" id="r-mtd-rooms">—</div><div class="mc-delta" id="r-mtd-rooms-var">—</div></div>
     <div class="mc"><div class="mc-label">YTD revenue</div><div class="mc-val" id="r-ytd">—</div></div>
     <div class="mc"><div class="mc-label">YTD vs target</div><div class="mc-val" id="r-ytd-var">—</div><div class="mc-delta" id="r-ytd-var-sub">—</div></div>
     <div class="mc"><div class="mc-label">Best month</div><div class="mc-val" id="r-best-mo">—</div><div class="mc-sub" id="r-best-rev">—</div></div>
@@ -729,7 +730,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         <div class="chart-wrap-lg"><canvas id="crTrendChart"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title">Comp set occupancy</div>
+        <div class="card-title">Comp set vs your occupancy</div>
+        <div class="legend"><span><span class="legend-sq" style="background:rgba(55,138,221,0.5)"></span>CS Occ%</span><span><span class="legend-line" style="background:#639922"></span>Your Occ%</span></div>
         <div class="chart-wrap-lg"><canvas id="crOccChart"></canvas></div>
       </div>
     </div>
@@ -1049,7 +1051,7 @@ function renderOutlook(){
     const barCol=pctGoal==null?'#888780':pctGoal>=90?'#639922':pctGoal>=70?'#EF9F27':'#E24B4A';
     const sig=getSignal(cs,bar,occ);
 
-    html+=`<tr onclick="openRevDay('${date}')" style="${isToday?'background:var(--blue-bg)':''}">
+    html+=`<tr onclick="openRevDay('${date}')" style="${isToday?'background:rgba(55,138,221,0.12);box-shadow:inset 3px 0 0 var(--chart-blue)':''}">
       <td style="font-weight:${isToday?'700':'600'}">${date.slice(5)}<div style="font-size:10px;color:${isWkd?'var(--chart-blue)':'var(--text3)'};font-weight:${isWkd?'700':'400'}">${dow}${isToday?' · today':''}</div></td>
       <td style="font-size:13px">${icons.join('')}</td>
       <td><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:600;min-width:54px">${rooms!=null?rooms:'—'}${goal!=null?'/'+goal:''}</span><div class="mini-bar"><div style="width:${Math.min(pctGoal||0,100)}%;background:${barCol}"></div></div></div></td>
@@ -1691,6 +1693,20 @@ function renderRevenue(){
     const rpEl=document.getElementById('r-mtd-revpar');
     if(rpEl)rpEl.textContent=totRevV>0?fmt(totRevV/(mtdDayCount*ROOMS_TOTAL)):'—';
     document.getElementById('r-mtd-occ').textContent=mtdD.occ?Math.round(fixOcc(mtdD.occ)*10)/10+'%':'—';
+    // MTD rooms sold vs goal
+    const mtdElapsed=mtdRows.filter(r=>r['Date']<=getToday());
+    const mtdRoomsSold=mtdElapsed.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0);
+    const mtdRoomsGoal=mtdElapsed.reduce((s,r)=>s+(n(r['Rooms Goal'])||0),0);
+    const rmEl=document.getElementById('r-mtd-rooms');
+    if(rmEl){
+      rmEl.textContent=mtdRoomsSold>0?mtdRoomsSold.toLocaleString()+(mtdRoomsGoal>0?' / '+mtdRoomsGoal.toLocaleString():''):'—';
+      const rmVar=document.getElementById('r-mtd-rooms-var');
+      if(rmVar&&mtdRoomsGoal>0){
+        const dv=mtdRoomsSold-mtdRoomsGoal;
+        rmVar.textContent=(dv>=0?'+':'')+dv.toLocaleString()+' rooms ('+(Math.round(mtdRoomsSold/mtdRoomsGoal*100))+'% of goal)';
+        rmVar.className='mc-delta '+(dv>=0?'up':'down');
+      }
+    }
   }
   const pastMos=moData.filter(d=>d.mo<thisMonth&&d.rev);
   if(pastMos.length){const best=pastMos.reduce((a,b)=>b.rev>a.rev?b:a);document.getElementById('r-best-mo').textContent=moLabel(best.mo);document.getElementById('r-best-rev').textContent=fmt(best.rev);}
@@ -1713,7 +1729,7 @@ function renderRevenue(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
-  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
+  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Rooms / Goal</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
   moData.forEach(d=>{
     const vd=(d.rev&&d.tgt&&d.tgt>1000)?d.rev-d.tgt:null;
     const vp=vd&&d.tgt?Math.round(vd/d.tgt*100):null;
@@ -1721,8 +1737,12 @@ function renderRevenue(){
     const sfx=d.mo===thisMonth?' (MTD)':d.mo<thisMonth?' ✓':'';
     const dim=new Date(parseInt(d.mo.slice(0,4)),parseInt(d.mo.slice(5)),0).getDate();
     const revpar=d.rev?d.rev/(dim*ROOMS_TOTAL):null;
+    // Rooms goal for the month from Daily Revenue
+    const moGoal=allRv.filter(r=>r['Date']&&r['Date'].startsWith(d.mo)).reduce((s,r)=>s+(n(r['Rooms Goal'])||0),0);
+    const rgVar=(d.rooms!=null&&moGoal>0)?d.rooms-moGoal:null;
     tbl+=`<tr><td style="font-weight:600">${moLabel(d.mo)}${sfx}</td><td>${fmt(d.rev)}</td><td>${fmt(d.tgt)}</td>
       <td class="${vd==null?'':vd>=0?'up':'down'}">${vd!=null?(vd>=0?'+':'')+fmt(vd)+' ('+(vp>=0?'+':'')+vp+'%)':'—'}</td>
+      <td><span style="font-weight:600">${d.rooms!=null?Math.round(d.rooms).toLocaleString():'—'}</span>${moGoal>0?'<span style="color:var(--text2)"> / '+moGoal.toLocaleString()+'</span>':''}${rgVar!=null?`<div style="font-size:10px;color:${rgVar>=0?'var(--green)':'var(--red)'}">${rgVar>=0?'+':''}${rgVar.toLocaleString()}</div>`:''}</td>
       <td>${occ!=null?occ+'%':'—'}</td>
       <td style="font-weight:600">${revpar!=null?fmt(revpar):'—'}</td></tr>`;
   });
@@ -2156,11 +2176,14 @@ function openRevDay(dateStr){
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let body='';
   if(rv||fc){
-    const revAct=rv?n(rv['Room Revenue']):null; const revTgt=rv?n(rv['Rev Target']):null;
+    const revAct=rv?n(rv['Room Revenue']):null;
     const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
     const adr=rv?n(rv['ADR Actual']):(fc?n(fc['ADR Actual']):null);
-    const adrFc=rv?n(rv['ADR Forecast']):(fc?n(fc['BAR']):null);
+    // Revenue Target = Rooms Goal × ADR actual (not ADR Forecast)
+    const revTgt=(roomsGoal!=null&&adr!=null)?roomsGoal*adr:(rv?n(rv['Rev Target']):null);
+    // BAR straight from the BAR column
+    const barVal=fc?n(fc['BAR']):null;
     const occ=fc?fixOcc(n(fc['Occ%'])):null;
     const trn=rv?n(rv['Transient Rooms']):(fc?n(fc['Transient Rooms']):null);
     const grp=rv?n(rv['Group Rooms']):(fc?n(fc['Group Rooms']):null);
@@ -2168,13 +2191,13 @@ function openRevDay(dateStr){
     const varRooms=rooms!=null&&roomsGoal!=null?rooms-roomsGoal:null;
     body+='<div class="modal-section"><div class="modal-section-title">Revenue &amp; Rooms</div>';
     body+=`<div class="modal-kv"><span class="modal-kv-label">Room Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target (Goal × ADR)</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
     if(varR!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Variance</span><span class="modal-kv-val" style="color:${varR>=0?'var(--green)':'var(--red)'}">${varR>=0?'+':''}${fmt(varR)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms sold</span><span class="modal-kv-val">${rooms!=null?rooms:'—'}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms goal</span><span class="modal-kv-val">${roomsGoal!=null?roomsGoal:'—'}</span></div>`;
     if(varRooms!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms variance</span><span class="modal-kv-val" style="color:${varRooms>=0?'var(--green)':'var(--red)'}">${varRooms>=0?'+':''}${varRooms}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">ADR</span><span class="modal-kv-val">${fmt(adr)}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">ADR Forecast / BAR</span><span class="modal-kv-val">${fmt(adrFc)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">BAR</span><span class="modal-kv-val">${fmt(barVal)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Occ%</span><span class="modal-kv-val">${occ!=null?Math.round(occ*10)/10+'%':'—'}</span></div>`;
     body+='</div>';
     if(trn!=null||grp!=null){
@@ -2554,11 +2577,14 @@ function renderCompTrendChart(){
   });
 
   if(charts.crOcc)charts.crOcc.destroy();
+  const myOccs=rows.map(r=>{const f=allFc.find(x=>x['Date']===r['Date']);const o=f?fixOcc(n(f['Occ%'])):null;return o!=null?Math.round(o*10)/10:null;});
   charts.crOcc=new Chart(document.getElementById('crOccChart'),{
-    type:'bar',
-    data:{labels,datasets:[{label:'CS Occ%',data:csOccs,backgroundColor:'rgba(55,138,221,0.5)',borderRadius:2}]},
+    data:{labels,datasets:[
+      {type:'bar',label:'CS Occ%',data:csOccs,backgroundColor:'rgba(55,138,221,0.5)',borderRadius:2,order:2},
+      {type:'line',label:'Your Occ%',data:myOccs,borderColor:'#639922',borderWidth:2.5,pointRadius:2,fill:false,tension:0.3,order:1},
+    ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y!=null?'CS Occ: '+Math.round(c.parsed.y)+'%':'—'}}},
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>c.parsed.y!=null?c.dataset.label+': '+Math.round(c.parsed.y)+'%':null}}},
       scales:{x:{ticks:{maxTicksLimit:10,font:{size:10},color:'#888780',autoSkip:true},grid:{display:false}},
               y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}
     }
