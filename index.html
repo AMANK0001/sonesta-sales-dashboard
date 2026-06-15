@@ -766,7 +766,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="crpanel-pricing">
     <div class="alert alert-blue" style="margin-bottom:.75rem;background:var(--blue-bg);color:var(--blue)">
       <i class="ti ti-info-circle"></i>
-      <span>Comp set: Hilton Garden Inn · Hampton Inn · Home2 Hilton · Fairfield Inn · Residence Inn · Best Western. Rates from Amadeus Rev360 via Expedia. Blank = closed or no data.</span>
+      <span>Comp set: all 9 hotels (Envision, Comfort Inn, Hilton Garden Inn, Hampton Inn, Home2 Hilton, Fairfield Inn, Red Roof, Residence Inn, Best Western). Rates from Amadeus Rev360 via Expedia. CS Avg = mean of open hotels only — blanks (closed/no data) excluded, never counted as $0.</span>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.75rem;align-items:center">
       <span style="font-size:11px;color:var(--text2)">Filter signal:</span>
@@ -2245,15 +2245,18 @@ function renderRevCal(){
     const revTgt=rv?n(rv['Rev Target']):null;
     const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
-    let colorClass='gray-cell'; let pctOfTarget=null;
+    let colorClass='red-cell'; let pctOfTarget=null;
     if(rooms!=null&&roomsGoal!=null&&roomsGoal>0){
       pctOfTarget=Math.round(rooms/roomsGoal*100);
       if(pctOfTarget>=90)colorClass='green-cell';
       else if(pctOfTarget>=70)colorClass='yellow-cell';
       else colorClass='red-cell';
+    } else {
+      pctOfTarget=0;
+      colorClass='red-cell';
     }
     const barColor=colorClass==='green-cell'?'#639922':colorClass==='yellow-cell'?'#EF9F27':'#E24B4A';
-    const pctClassR=colorClass==='green-cell'?'green':colorClass==='yellow-cell'?'amber':colorClass==='red-cell'?'red':'gray';
+    const pctClassR=colorClass==='green-cell'?'green':colorClass==='yellow-cell'?'amber':'red';
     const eventIcons=[];
     if(ev&&ev['Gillette Stadium']) eventIcons.push('🏟');
     if(ev&&ev['Xfinity Center'])  eventIcons.push('🎵');
@@ -2444,8 +2447,8 @@ function renderActions(){
 
 // ── COMP RATES ────────────────────────────────────────────────────────────────
 // Included comps (excludes Envision, Comfort Inn, Red Roof)
-const COMP_COLS=['Hilton Garden Inn','Hampton Inn','Home2 Hilton','Fairfield Inn','Residence Inn','Best Western'];
-const COMP_COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A'];
+const COMP_COLS=['Envision','Comfort Inn','Hilton Garden Inn','Hampton Inn','Home2 Hilton','Fairfield Inn','Red Roof','Residence Inn','Best Western'];
+const COMP_COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A','#A32D2D','#1D9E75','#888780'];
 let crCurrentPanel='pricing';
 let crFwdRows=[];  // stored at module scope so tab switches can re-render
 
@@ -2528,7 +2531,7 @@ function renderCompRatesKPIs(todayRow,todayCS,myBar,csOcc,fwdAvg,days){
   }
   document.getElementById('cr-kpis').innerHTML=`
     <div class="mc"><div class="mc-label">CS occ% today</div><div class="mc-val">${csOcc!=null?Math.round(csOcc*10)/10+'%':'—'}</div><div class="mc-sub">comp set avg</div></div>
-    <div class="mc"><div class="mc-label">CS avg rate today</div><div class="mc-val">${todayCS.avg!=null?fmt(todayCS.avg):'—'}</div><div class="mc-sub">${todayCS.open} of 6 comps open</div></div>
+    <div class="mc"><div class="mc-label">CS avg rate today</div><div class="mc-val">${todayCS.avg!=null?fmt(todayCS.avg):'—'}</div><div class="mc-sub">${todayCS.open} of 9 comps open</div></div>
     <div class="mc"><div class="mc-label">CS range today</div><div class="mc-val" style="font-size:16px">${todayCS.min!=null?fmt(todayCS.min)+' – '+fmt(todayCS.max):'—'}</div><div class="mc-sub">min – max</div></div>
     <div class="mc"><div class="mc-label">Your BAR today</div><div class="mc-val">${myBar!=null?fmt(myBar):'—'}</div><div class="mc-delta" style="color:${posColor};font-size:11px">${posLabel}</div></div>
     <div class="mc"><div class="mc-label">CS avg next ${days}d</div><div class="mc-val">${fwdAvg!=null?fmt(fwdAvg):'—'}</div><div class="mc-sub">forward-looking avg</div></div>`;
