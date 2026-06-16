@@ -161,7 +161,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .cal-legend{display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;align-items:center}
 .cal-legend span{display:flex;align-items:center;gap:5px}
 .cal-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:4px}
 .cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:8px 0;text-transform:uppercase;letter-spacing:.04em}
 .cal-cell{min-height:96px;border-radius:var(--radius);background:var(--bg);border:.5px solid var(--border);border-left:3px solid transparent;padding:8px 9px 6px;cursor:pointer;transition:box-shadow .15s,border-color .15s;position:relative;display:flex;flex-direction:column;gap:3px}
 .cal-cell:hover{box-shadow:0 3px 12px rgba(0,0,0,.1);border-color:var(--border2)}
@@ -872,16 +872,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="card" id="owner-controls" style="margin-bottom:1.25rem">
     <div class="card-title">Report period</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <button class="ftab" id="opb-current" onclick="ownerPeriod('current',this)">Current payroll period</button>
+      <button class="ftab active" id="opb-current" onclick="ownerPeriod('current',this)">Current payroll period</button>
       <button class="ftab" id="opb-last" onclick="ownerPeriod('last',this)">Last payroll period</button>
       <button class="ftab" id="opb-month" onclick="ownerPeriod('month',this)">This calendar month</button>
       <button class="ftab" id="opb-custom" onclick="ownerPeriod('custom',this)">Custom dates</button>
     </div>
     <div id="owner-custom-row" style="display:none;gap:10px;flex-wrap:wrap;align-items:center">
       <span style="font-size:12px;color:var(--text2)">From</span>
-      <input type="date" id="owner-from" min="2026-01-01" max="2026-12-31" value="2026-01-01" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+      <input type="date" id="owner-from" min="2026-01-01" max="2026-12-31" value="2026-01-01" onchange="if(ownerPeriodMode==='custom')renderOwnerReport()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
       <span style="font-size:12px;color:var(--text2)">to</span>
-      <input type="date" id="owner-to" min="2026-01-01" max="2026-12-31" value="2026-12-31" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+      <input type="date" id="owner-to" min="2026-01-01" max="2026-12-31" value="2026-12-31" onchange="if(ownerPeriodMode==='custom')renderOwnerReport()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
       <button class="or-print-btn" style="margin:0;padding:7px 14px" onclick="renderOwnerReport()"><i class="ti ti-refresh"></i> Generate</button>
     </div>
   </div>
@@ -2191,15 +2191,12 @@ function renderGroupsCal(){
     const blockCount=new Set(dayBlocks.map(b=>b.blockCode)).size;
     const hasRisk=activeBlocks.some(b=>b.atRisk);
 
-    // If NO active rooms tonight → RED cell (group exists but 0 pickup)
+    // If NO active rooms tonight → RED cell, same compact structure as active cells
     if(!activeBlocks.length){
-      const names=[...new Set(ghostBlocks.map(b=>b.blockName||b.blockCode))];
       return `<div class="cal-cell red-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')">
         <div class="cal-day-num">${dayNumHtml}</div>
         <div class="cal-info bold">${blockCount} group${blockCount>1?'s':''}</div>
-        <div class="cal-info" style="color:var(--text2)">0 rooms picked up</div>
-        ${names.slice(0,1).map(nm=>`<div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div>`).join('')}
-        ${names.length>1?`<div style="font-size:10px;color:var(--text3)">+${names.length-1} more</div>`:''}
+        <div class="cal-info">0 rooms · $0</div>
         <div class="cal-bar-wrap"><div class="cal-bar"><div class="cal-bar-fill" style="width:3%;background:#E24B4A"></div></div><div class="cal-pct red">0% pickup</div></div>
       </div>`;
     }
@@ -2233,72 +2230,51 @@ function openGroupDayBI(dateStr){
   }
 
   const allAgg=aggregateBiByBlockNight(rawRows);
-  const activeBlocks=allAgg.filter(e=>e.rooms>0);   // rooms on property tonight
-  const ghostBlocks=allAgg.filter(e=>e.rooms===0);   // in block info but 0 rooms tonight
-
+  // Sort: active (rooms>0) first, then 0-pickup blocks
+  allAgg.sort((a,b)=>b.rooms-a.rooms);
+  const activeBlocks=allAgg.filter(e=>e.rooms>0);
   const totalRooms=activeBlocks.reduce((s,e)=>s+e.rooms,0);
   const totalRev=activeBlocks.reduce((s,e)=>s+e.rev,0);
 
   let body='';
 
-  // Summary strip — only count active blocks
-  if(activeBlocks.length){
-    body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
-      <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
-      <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
-      <div><div style="font-size:11px;color:var(--text2)">Blocks on property</div><div style="font-size:20px;font-weight:700">${activeBlocks.length}</div></div>
-    </div>`;
-  } else {
-    body+=`<div style="padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;font-size:13px;color:var(--text2)">No rooms picked up tonight — ${ghostBlocks.length} block${ghostBlocks.length>1?'s':''} in block info with 0 rooms.</div>`;
-  }
+  // Summary strip
+  body+=`<div style="display:flex;gap:2rem;padding:10px 0 14px;border-bottom:.5px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
+    <div><div style="font-size:11px;color:var(--text2)">Picked up tonight</div><div style="font-size:20px;font-weight:700">${totalRooms}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Calc. revenue</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(totalRev)}</div></div>
+    <div><div style="font-size:11px;color:var(--text2)">Groups on property</div><div style="font-size:20px;font-weight:700">${allAgg.length}</div></div>
+  </div>`;
 
-  // Active blocks — full detail cards
-  activeBlocks.forEach(e=>{
+  // Every block — full detail card (active and 0-pickup alike)
+  allAgg.forEach(e=>{
     const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
     const p=pipe?n(pipe['Pickup %']):null;
     const currentBlock=pipe?n(pipe['Current Block']):null;
+    const contracted=pipe?n(pipe['Contracted Rooms']):null;
     const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
+    const roomsAvail=pipe?n(pipe['Rooms Available']):null;
+    const isZero=e.rooms===0;
     const statusColor=pipe&&pipe['At Risk?']==='YES'?'var(--red)':pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--text)';
     const typesStr=e.roomTypes&&e.roomTypes.length?e.roomTypes.join(', '):'';
-    body+=`<div class="modal-section" style="border:.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
-      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:e.blockCode}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}</div>
+    const borderC=isZero?'var(--red)':'var(--border)';
+    body+=`<div class="modal-section" style="border:.5px solid ${borderC};border-left:3px solid ${isZero?'var(--red)':(pipe&&pipe['Status']==='DEF'?'var(--green)':'var(--border2)')};border-radius:var(--radius);padding:10px;margin-bottom:8px">
+      <div style="font-weight:600;margin-bottom:6px;color:${statusColor}">${pipe?pipe['Block Name']:e.blockCode}${pipe&&pipe['At Risk?']==='YES'?' ⚠':''}${isZero?' <span class="chip chip-red" style="font-size:10px">0 pickup</span>':''}</div>
       <div class="modal-kv"><span class="modal-kv-label">Block Code</span><span class="modal-kv-val">${e.blockCode}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Status</span><span class="modal-kv-val">${pipe?pipe['Status']:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700">${e.rooms}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Market</span><span class="modal-kv-val">${pipe?pipe['Market Type']||'—':'—'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">Rooms tonight</span><span class="modal-kv-val" style="font-weight:700;color:${isZero?'var(--red)':'var(--text)'}">${e.rooms}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Total picked up (block)</span><span class="modal-kv-val">${pickedUpTotal!=null?pickedUpTotal:'—'}</span></div>
       <div class="modal-kv"><span class="modal-kv-label">Current block size</span><span class="modal-kv-val">${currentBlock!=null?currentBlock:'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue</span><span class="modal-kv-val" style="font-weight:700;color:var(--green)">${e.rev>0?fmt(e.rev):'—'}</span></div>
-      <div class="modal-kv"><span class="modal-kv-label">Blended rate</span><span class="modal-kv-val">${e.avgRate!=null?fmt(e.avgRate):'—'}</span></div>
-      ${typesStr?`<div class="modal-kv"><span class="modal-kv-label">Room types</span><span class="modal-kv-val" style="font-size:11px">${typesStr}</span></div>`:''}
+      ${contracted!=null?`<div class="modal-kv"><span class="modal-kv-label">Contracted rooms</span><span class="modal-kv-val">${contracted}</span></div>`:''}
+      ${roomsAvail!=null?`<div class="modal-kv"><span class="modal-kv-label">Rooms still available</span><span class="modal-kv-val">${roomsAvail}</span></div>`:''}
+      <div class="modal-kv"><span class="modal-kv-label">Calc. revenue tonight</span><span class="modal-kv-val" style="font-weight:700;color:${e.rev>0?'var(--green)':'var(--text2)'}">${e.rev>0?fmt(e.rev):'$0'}</span></div>
+      <div class="modal-kv"><span class="modal-kv-label">${isZero?'Contracted rate':'Blended rate'}</span><span class="modal-kv-val">${e.avgRate!=null?fmt(e.avgRate):(pipe&&n(pipe['Avg Rate'])?fmt(n(pipe['Avg Rate'])):'—')}</span></div>
+      ${typesStr?`<div class="modal-kv"><span class="modal-kv-label">Room types tonight</span><span class="modal-kv-val" style="font-size:11px">${typesStr}</span></div>`:''}
       ${p!=null?`<div class="modal-kv"><span class="modal-kv-label">Overall pickup %</span><span class="modal-kv-val" style="color:${p>=70?'var(--green)':p>=50?'var(--amber)':'var(--red)'}">${Math.round(p)}%</span></div>`:''}
-      ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}</span></div>`:''}
+      ${pipe&&pipe['Cutoff Date']?`<div class="modal-kv"><span class="modal-kv-label">Cutoff date</span><span class="modal-kv-val">${pipe['Cutoff Date']}${pipe['Days to Cutoff']!=null?' ('+pipe['Days to Cutoff']+'d)':''}</span></div>`:''}
+      ${isZero?`<div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:.5px solid var(--border)">No rooms picked up for this night yet. ${p!=null&&p>0?'Block has '+Math.round(p)+'% pickup overall but none allocated to this specific night.':'Block is contracted but guests have not booked rooms for this date.'}</div>`:''}
     </div>`;
   });
-
-  // Ghost blocks — compact dimmed rows
-  if(ghostBlocks.length){
-    body+=`<div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border)">
-      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Also in block file — 0 rooms tonight</div>`;
-    ghostBlocks.forEach(e=>{
-      const pipe=allPi.find(p=>p['Block Code']===e.blockCode);
-      const p=pipe?n(pipe['Pickup %']):null;
-      const currentBlock=pipe?n(pipe['Current Block']):null;
-      const pickedUpTotal=pipe?n(pipe['Rooms Picked Up']):null;
-      body+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--border);opacity:0.55;font-size:12px">
-        <div>
-          <span style="font-weight:600">${pipe?pipe['Block Name']:e.blockCode}</span>
-          <span style="color:var(--text3);margin-left:8px">${e.blockCode}</span>
-        </div>
-        <div style="display:flex;gap:12px;color:var(--text2);font-size:11px">
-          ${pipe?`<span>${pipe['Status']}</span>`:''}
-          ${currentBlock!=null?`<span>Block: ${currentBlock}</span>`:''}
-          ${pickedUpTotal!=null?`<span>Picked up: ${pickedUpTotal}</span>`:''}
-          ${p!=null?`<span>${Math.round(p)}% pickup</span>`:''}
-        </div>
-      </div>`;
-    });
-    body+='</div>';
-  }
 
   openModal(label,body);
 }
@@ -3578,6 +3554,8 @@ function renderOwnerReport(){
   const ytdDays = ytdRows.length||1;
   const ytdOcc = ytd.rooms/(ytdDays*ROOMS_TOTAL)*100;
   const ytdAdr = ytd.rooms>0? ytd.rev/ytd.rooms : null;
+  // Full-year ADR (earned + on the books) — forward-looking average rate for all 2026
+  const fyAdr = fullYear.rooms>0? fullYear.rev/fullYear.rooms : null;
 
   const fmtD=ds=>new Date(ds+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const dNow=new Date(today+'T12:00:00');
@@ -3658,7 +3636,7 @@ function renderOwnerReport(){
       </div>
       <div class="or-hero-grid">
         <div><div class="v">${heroEarnedForSplit.rooms.toLocaleString()}</div><div class="l">Rooms sold</div></div>
-        <div><div class="v">${perAdr!=null?fmt(perAdr):(heroEarnedForSplit.rooms>0?fmt(heroEarnedForSplit.rev/heroEarnedForSplit.rooms):'—')}</div><div class="l">Average rate</div></div>
+        <div><div class="v">${perAdr!=null?fmt(perAdr):(heroEarnedForSplit.rooms>0?fmt(heroEarnedForSplit.rev/heroEarnedForSplit.rooms):'—')}</div><div class="l">Average rate${periodHasPast?' (as of now)':''}</div></div>
         <div><div class="v">${perOcc!=null?Math.round(perOcc)+'%':'—'}</div><div class="l">How full</div></div>
         <div><div class="v">${fmt(pTotal.rev)}</div><div class="l">Period total${periodHasFuture?' (w/ on books)':''}</div></div>
       </div>
@@ -3680,9 +3658,13 @@ function renderOwnerReport(){
         ${splitBar(ahead.trnRev,ahead.grpRev)}
       </div>
       <div class="or-card">
-        <div class="or-card-label">Average daily rate (year)</div>
+        <div class="or-card-label">Average daily rate</div>
         <div class="or-card-big">${ytdAdr!=null?fmt(ytdAdr):'—'}</div>
-        <div class="or-card-note">what each sold room earns on average</div>
+        <div class="or-card-note">year so far (as of today)</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border)">
+          <div style="font-size:20px;font-weight:700;color:var(--text)">${fyAdr!=null?fmt(fyAdr):'—'}</div>
+          <div class="or-card-note">full year (earned + on the books)</div>
+        </div>
       </div>
     </div>
 
