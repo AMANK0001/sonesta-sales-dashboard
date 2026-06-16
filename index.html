@@ -49,6 +49,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .need-row{display:grid;grid-template-columns:95px 50px 1fr 90px 110px 1fr;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer;transition:box-shadow .15s}
 .need-row:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
 @media(max-width:760px){.need-row{grid-template-columns:80px 1fr 80px;gap:6px}.need-row>div:nth-child(2),.need-row>div:nth-child(5),.need-row>div:nth-child(6){display:none}}
+/* ── OWNER REPORT ── */
+.or-wrap{max-width:850px;margin:0 auto;background:var(--bg3);color:var(--text)}
+.or-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--chart-blue);padding-bottom:16px;margin-bottom:24px}
+.or-title{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0}
+.or-sub{font-size:13px;color:var(--text2);margin-top:4px}
+.or-meta{text-align:right;font-size:12px;color:var(--text2);line-height:1.7}
+.or-oneline{background:var(--blue-bg);color:var(--blue);border-radius:12px;padding:16px 20px;font-size:15px;line-height:1.5;margin-bottom:24px;font-weight:500}
+.or-section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:0 0 12px}
+.or-hero{background:linear-gradient(135deg,var(--chart-blue),#2563eb);color:#fff;border-radius:16px;padding:24px 28px;margin-bottom:28px;box-shadow:0 8px 30px rgba(55,138,221,.25)}
+.or-hero .or-hero-label{font-size:13px;font-weight:600;opacity:.9;text-transform:uppercase;letter-spacing:.06em}
+.or-hero .or-hero-big{font-size:42px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:6px 0}
+.or-hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.25)}
+.or-hero-grid .v{font-size:22px;font-weight:700}
+.or-hero-grid .l{font-size:11px;opacity:.85;margin-top:2px}
+.or-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.or-card{border:1px solid var(--border);border-radius:14px;padding:20px}
+.or-card .or-card-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+.or-card .or-card-big{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:8px 0 4px}
+.or-card .or-card-note{font-size:12px;color:var(--text2)}
+.or-split{display:flex;gap:6px;margin-top:14px;font-size:12px}
+.or-split-bar{height:8px;border-radius:4px;overflow:hidden;display:flex;margin:8px 0 4px}
+.or-breakdown{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:3px}
+.or-fullyear{border:2px solid var(--chart-green);border-radius:16px;padding:24px 28px;margin-bottom:28px;background:var(--green-bg)}
+.or-print-btn{display:inline-flex;align-items:center;gap:8px;background:var(--chart-blue);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:20px}
+.or-print-btn:hover{opacity:.9}
+.or-monthbars{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.or-mb-row{display:grid;grid-template-columns:90px 1fr 110px;align-items:center;gap:12px;font-size:13px}
+.or-mb-track{height:22px;background:var(--bg2);border-radius:6px;overflow:hidden}
+.or-mb-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;color:#fff;font-size:11px;font-weight:600}
+.or-foot{font-size:11px;color:var(--text3);text-align:center;margin-top:30px;padding-top:16px;border-top:1px solid var(--border)}
+@media print{
+  body{background:#fff!important}
+  .nav,.header,.or-print-btn,#refresh-btn{display:none!important}
+  .page{padding:0!important}
+  .or-wrap{max-width:100%}
+  .or-hero{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none}
+  .or-oneline,.or-fullyear,.or-mb-fill,.or-hero-grid{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .or-card,.or-fullyear{break-inside:avoid}
+}
+@media(max-width:760px){.or-hero-grid{grid-template-columns:repeat(2,1fr)}.or-cards{grid-template-columns:1fr}.or-mb-row{grid-template-columns:70px 1fr 90px}}
 .nav-tab{padding:.7rem 1.1rem;font-size:13px;font-weight:500;color:var(--text2);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:color .15s}
 .nav-tab:hover{color:var(--text)}
 .nav-tab.active{color:var(--text);border-bottom-color:var(--text)}
@@ -194,6 +234,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('groups-cal',this)"><i class="ti ti-calendar-stats"></i> Groups cal</button>
   <button class="nav-tab" onclick="showPage('rev-cal',this)"><i class="ti ti-calendar-dollar"></i> Rev cal</button>
   <button class="nav-tab" onclick="showPage('actions',this)"><i class="ti ti-checklist"></i> Actions</button>
+  <button class="nav-tab" onclick="showPage('owner',this)"><i class="ti ti-file-dollar"></i> Owner Report</button>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -826,6 +867,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="action-list" class="insight-row"><div class="loading">Building action list...</div></div>
 </div>
 
+<!-- OWNER REPORT -->
+<div class="page" id="page-owner">
+  <button class="or-print-btn" onclick="window.print()"><i class="ti ti-printer"></i> Print / Save as PDF</button>
+  <div class="or-wrap" id="owner-report"><div class="loading">Preparing report...</div></div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -873,6 +920,7 @@ function showPage(id,btn){
   if(id==='grp-roomtype') renderGrpRoomType();
   if(id==='roomtype-dive') renderRoomTypeDive();
   if(id==='pace') renderPace();
+  if(id==='owner') renderOwnerReport();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -2127,14 +2175,16 @@ function renderGroupsCal(){
     const blockCount=new Set(dayBlocks.map(b=>b.blockCode)).size;
     const hasRisk=activeBlocks.some(b=>b.atRisk);
 
-    // If NO active rooms tonight → subtle neutral cell, just show block names dimmed
+    // If NO active rooms tonight → RED cell (group exists but 0 pickup)
     if(!activeBlocks.length){
       const names=[...new Set(ghostBlocks.map(b=>b.blockName||b.blockCode))];
-      return `<div class="cal-cell gray-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')" style="opacity:0.7">
+      return `<div class="cal-cell red-cell${isToday?' today-cell':''}" onclick="openGroupDayBI('${dateStr}')">
         <div class="cal-day-num">${dayNumHtml}</div>
-        <div class="cal-info" style="color:var(--text3);font-size:10px">${blockCount} block${blockCount>1?'s':''} · 0 rooms</div>
-        ${names.slice(0,2).map(nm=>`<div style="font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div>`).join('')}
-        ${names.length>2?`<div style="font-size:9px;color:var(--text3)">+${names.length-2} more</div>`:''}
+        <div class="cal-info bold">${blockCount} group${blockCount>1?'s':''}</div>
+        <div class="cal-info" style="color:var(--text2)">0 rooms picked up</div>
+        ${names.slice(0,1).map(nm=>`<div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${nm}</div>`).join('')}
+        ${names.length>1?`<div style="font-size:10px;color:var(--text3)">+${names.length-1} more</div>`:''}
+        <div class="cal-bar-wrap"><div class="cal-bar"><div class="cal-bar-fill" style="width:3%;background:#E24B4A"></div></div><div class="cal-pct red">0% pickup</div></div>
       </div>`;
     }
 
@@ -3426,6 +3476,175 @@ function renderPaceTable(){
   });
   html+='</tbody></table>';
   el.innerHTML=html;
+}
+
+// ── OWNER REPORT — simple money summary for hands-off investors ───────────────
+function renderOwnerReport(){
+  const el=document.getElementById('owner-report'); if(!el)return;
+  const today=getToday();
+  const thisMonth=getThisMonth();
+  const yr='2026';
+
+  // Helper: split a set of Daily Revenue rows into transient/group revenue.
+  // Revenue split is proportional to room split (Duetto doesn't export segment ADR).
+  function revSplit(rows){
+    let rev=0, rooms=0, trnRooms=0, grpRooms=0;
+    rows.forEach(r=>{
+      const rv=n(r['Room Revenue'])||0;
+      const tr=n(r['Total Rooms'])||0;
+      const t=n(r['Transient Rooms'])||0;
+      const g=n(r['Group Rooms'])||0;
+      rev+=rv; rooms+=tr; trnRooms+=t; grpRooms+=g;
+    });
+    const totSeg=trnRooms+grpRooms;
+    const trnRev=totSeg>0?rev*(trnRooms/totSeg):rev;
+    const grpRev=totSeg>0?rev*(grpRooms/totSeg):0;
+    return {rev,rooms,trnRooms,grpRooms,trnRev,grpRev};
+  }
+
+  // Date buckets
+  const ytdRows   = allRv.filter(r=>r['Date']&&r['Date']>=yr+'-01-01'&&r['Date']<=today);
+  const monthRows = allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
+  const monthEarned = monthRows.filter(r=>r['Date']<=today);
+  const monthAhead  = monthRows.filter(r=>r['Date']>today);
+  const aheadRows = allRv.filter(r=>r['Date']&&r['Date']>today&&r['Date']<=yr+'-12-31');
+
+  const ytd      = revSplit(ytdRows);
+  const moEarned = revSplit(monthEarned);
+  const moAhead  = revSplit(monthAhead);
+  const moTotal  = revSplit(monthRows);
+  const ahead    = revSplit(aheadRows);
+  const fullYear = revSplit(allRv.filter(r=>r['Date']&&r['Date']>=yr+'-01-01'&&r['Date']<=yr+'-12-31'));
+
+  const moOcc = monthEarned.length? moEarned.rooms/(monthEarned.length*ROOMS_TOTAL)*100 : null;
+  const ytdDays = ytdRows.length||1;
+  const ytdOcc = ytd.rooms/(ytdDays*ROOMS_TOTAL)*100;
+  const moAdr = moEarned.rooms>0? moEarned.rev/moEarned.rooms : null;
+  const ytdAdr = ytd.rooms>0? ytd.rev/ytd.rooms : null;
+
+  // Payroll period — biweekly, anchor to the most recent 1st/15th boundary containing today
+  const dNow=new Date(today+'T12:00:00');
+  const dom=dNow.getDate();
+  let perStart,perEnd;
+  if(dom<=15){perStart=new Date(dNow.getFullYear(),dNow.getMonth(),1);perEnd=new Date(dNow.getFullYear(),dNow.getMonth(),15);}
+  else{perStart=new Date(dNow.getFullYear(),dNow.getMonth(),16);perEnd=new Date(dNow.getFullYear(),dNow.getMonth()+1,0);}
+  const fmtD=dt=>dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const genDate=dNow.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const moName=new Date(thisMonth+'-01T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  // mini split bar
+  function splitBar(trnRev,grpRev){
+    const tot=trnRev+grpRev; if(tot<=0)return'';
+    const tp=Math.round(trnRev/tot*100), gp=100-tp;
+    return `<div class="or-split-bar">
+      <div style="width:${tp}%;background:var(--chart-blue)"></div>
+      <div style="width:${gp}%;background:var(--chart-green)"></div>
+    </div>
+    <div class="or-breakdown"><span style="color:var(--chart-blue)">▌Transient ${fmt(trnRev)}</span><span style="color:var(--chart-green)">Group ${fmt(grpRev)}▐</span></div>`;
+  }
+
+  // Month-by-month bar list (earned vs upcoming)
+  const MONTHS=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const moRevs=MONTHS.map(mo=>{
+    const rows=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo));
+    const earned=mo<thisMonth;
+    const cur=mo===thisMonth;
+    return {mo,rev:rows.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0),earned,cur};
+  });
+  const maxRev=Math.max(...moRevs.map(m=>m.rev),1);
+  const monthBars=moRevs.map(m=>{
+    if(m.rev<=0)return `<div class="or-mb-row"><div style="font-weight:600">${moLabel(m.mo)}</div><div class="or-mb-track"></div><div style="text-align:right;color:var(--text3)">—</div></div>`;
+    const w=Math.max(m.rev/maxRev*100,6);
+    const col=m.cur?'#2563eb':m.earned?'#639922':'#9CC265';
+    const tag=m.cur?' (now)':m.earned?'':'';
+    return `<div class="or-mb-row">
+      <div style="font-weight:600">${moLabel(m.mo)}${tag}</div>
+      <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:${col}">${m.rev>maxRev*0.18?fmt(m.rev):''}</div></div>
+      <div style="text-align:right;font-weight:600">${m.rev<=maxRev*0.18?fmt(m.rev):''}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="or-head">
+      <div>
+        <h1 class="or-title">Sonesta Select Boston Foxborough</h1>
+        <div class="or-sub">Owner Revenue Summary · 2026</div>
+      </div>
+      <div class="or-meta">
+        Generated<br><b style="color:var(--text)">${genDate}</b><br>
+        Payroll period<br><b style="color:var(--text)">${fmtD(perStart)} – ${fmtD(perEnd)}</b>
+      </div>
+    </div>
+
+    <div class="or-oneline">
+      Through ${dNow.toLocaleDateString('en-US',{month:'long',day:'numeric'})}, the hotel has earned <b>${fmt(ytd.rev)}</b> this year,
+      with <b>${fmt(ahead.rev)}</b> more already booked for the months ahead —
+      bringing total secured revenue for 2026 to <b>${fmt(ytd.rev+ahead.rev)}</b>.
+    </div>
+
+    <!-- CURRENT MONTH — HIGHLIGHTED -->
+    <div class="or-hero">
+      <div class="or-hero-label">${moName} — current month</div>
+      <div class="or-hero-big">${fmt(moEarned.rev)}</div>
+      <div style="font-size:13px;opacity:.9">earned so far · ${fmt(moAhead.rev)} more on the books for the rest of the month</div>
+      <div style="margin-top:14px;font-size:13px;opacity:.95">
+        <span style="display:inline-block;width:11px;height:11px;background:rgba(255,255,255,.95);border-radius:2px;margin-right:5px;vertical-align:middle"></span>Transient ${fmt(moEarned.trnRev)}
+        &nbsp;&nbsp;
+        <span style="display:inline-block;width:11px;height:11px;background:rgba(255,255,255,.55);border-radius:2px;margin-right:5px;vertical-align:middle"></span>Group ${fmt(moEarned.grpRev)}
+      </div>
+      <div class="or-hero-grid">
+        <div><div class="v">${moEarned.rooms.toLocaleString()}</div><div class="l">Rooms sold</div></div>
+        <div><div class="v">${moAdr!=null?fmt(moAdr):'—'}</div><div class="l">Average rate</div></div>
+        <div><div class="v">${moOcc!=null?Math.round(moOcc)+'%':'—'}</div><div class="l">How full</div></div>
+        <div><div class="v">${fmt(moTotal.rev)}</div><div class="l">Month total (w/ on books)</div></div>
+      </div>
+    </div>
+
+    <!-- YEAR SO FAR + ON THE BOOKS + FULL YEAR -->
+    <div class="or-section-label">The bigger picture</div>
+    <div class="or-cards">
+      <div class="or-card">
+        <div class="or-card-label">Year so far</div>
+        <div class="or-card-big">${fmt(ytd.rev)}</div>
+        <div class="or-card-note">${ytd.rooms.toLocaleString()} rooms sold · ${ytdAdr!=null?fmt(ytdAdr):'—'} avg rate · ${Math.round(ytdOcc)}% full</div>
+        ${splitBar(ytd.trnRev,ytd.grpRev)}
+      </div>
+      <div class="or-card">
+        <div class="or-card-label">On the books ahead</div>
+        <div class="or-card-big">${fmt(ahead.rev)}</div>
+        <div class="or-card-note">${ahead.rooms.toLocaleString()} rooms already booked · rest of ${yr}</div>
+        ${splitBar(ahead.trnRev,ahead.grpRev)}
+      </div>
+      <div class="or-card">
+        <div class="or-card-label">Average daily rate (year)</div>
+        <div class="or-card-big">${ytdAdr!=null?fmt(ytdAdr):'—'}</div>
+        <div class="or-card-note">what each sold room earns on average</div>
+      </div>
+    </div>
+
+    <!-- FULL YEAR -->
+    <div class="or-fullyear">
+      <div class="or-card-label" style="color:var(--chart-green)">Total secured revenue — 2026</div>
+      <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ytd.rev+ahead.rev)}</div>
+      <div style="font-size:13px;color:var(--text2)">${fmt(ytd.rev)} earned + ${fmt(ahead.rev)} already booked ahead</div>
+      <div style="margin-top:12px">${splitBar(fullYear.trnRev,fullYear.grpRev)}</div>
+    </div>
+
+    <!-- MONTH BY MONTH -->
+    <div class="or-section-label">Revenue by month</div>
+    <div class="or-monthbars">${monthBars}</div>
+    <div style="display:flex;gap:18px;font-size:11px;color:var(--text2);margin-top:12px">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#639922;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Earned</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;vertical-align:middle;margin-right:4px"></span>This month</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#9CC265;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Booked ahead</span>
+    </div>
+
+    <div class="or-foot">
+      All figures are room revenue. "On the books" means rooms already reserved for future dates.
+      Transient = individual guests · Group = blocks, weddings, teams, and events.
+      Revenue by guest type is estimated from the room mix. Report reflects live booking data as of generation.
+    </div>
+  `;
 }
 
 loadAll();
