@@ -1050,7 +1050,8 @@ function renderOverviewRAG(){
     let rev=row?n(row['Room Revenue']):null;
     let tgt=row?n(row['Revenue Target']):null;
     if(isCur&&!rev){
-      const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo));
+      const today2=getToday();
+      const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Date']<=today2);
       rev=mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
       tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null;
     }
@@ -1747,11 +1748,14 @@ function renderRevenue(){
     let rev=row?n(row['Room Revenue']):null,tgt=row?n(row['Revenue Target']):null;
     let rooms=row?n(row['Total Rooms']):null,occ=row?n(row['Avg Occ%']):null;
     let trn=row?n(row['Transient %']):null,grp=row?n(row['Group %']):null;
-    if(mo===thisMonth&&!rev){
-      const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo));
-      rev=mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
-      tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null;
-      rooms=mtd.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0)||null;
+    if(mo===thisMonth&&(!rev||!rooms)){
+      const today=getToday();
+      const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Date']<=today);
+      if(!rev){
+        rev=mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
+        tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null;
+      }
+      if(!rooms) rooms=mtd.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0)||null;
     }
     return{mo,rev,tgt,rooms,occ,trn,grp};
   }).filter(d=>d.rev!=null||d.rooms!=null);
@@ -2287,10 +2291,10 @@ function openRevDay(dateStr){
     const revAct=rv?n(rv['Room Revenue']):null;
     const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
-    const adr=rv?n(rv['ADR Actual']):(fc?n(fc['ADR Actual']):null);
-    // Revenue Target = Rooms Goal × ADR actual (not ADR Forecast)
-    const revTgt=(roomsGoal!=null&&adr!=null)?roomsGoal*adr:(rv?n(rv['Rev Target']):null);
-    // BAR straight from the BAR column
+    const adrRealized=fc?n(fc['ADR Actual']):null;                 // col 4 realized — from Daily Forecast (no collision)
+    const adrPlan=rv?n(rv['ADR Actual']):null;                     // col 9 plan ADR — rv collision means col9 wins, which is what we want for target
+    // Revenue Target = Rooms Goal × Plan ADR; fallback to sheet's Rev Target column
+    const revTgt=(roomsGoal!=null&&adrPlan!=null)?roomsGoal*adrPlan:(rv?n(rv['Rev Target']):null);
     const barVal=fc?n(fc['BAR']):null;
     const occ=fc?fixOcc(n(fc['Occ%'])):null;
     const trn=rv?n(rv['Transient Rooms']):(fc?n(fc['Transient Rooms']):null);
@@ -2299,12 +2303,13 @@ function openRevDay(dateStr){
     const varRooms=rooms!=null&&roomsGoal!=null?rooms-roomsGoal:null;
     body+='<div class="modal-section"><div class="modal-section-title">Revenue &amp; Rooms</div>';
     body+=`<div class="modal-kv"><span class="modal-kv-label">Room Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target (Goal × ADR)</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target (Goal × Plan ADR)</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
     if(varR!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Variance</span><span class="modal-kv-val" style="color:${varR>=0?'var(--green)':'var(--red)'}">${varR>=0?'+':''}${fmt(varR)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms sold</span><span class="modal-kv-val">${rooms!=null?rooms:'—'}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms goal</span><span class="modal-kv-val">${roomsGoal!=null?roomsGoal:'—'}</span></div>`;
     if(varRooms!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms variance</span><span class="modal-kv-val" style="color:${varRooms>=0?'var(--green)':'var(--red)'}">${varRooms>=0?'+':''}${varRooms}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">ADR</span><span class="modal-kv-val">${fmt(adr)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">ADR (realized)</span><span class="modal-kv-val">${fmt(adrRealized)}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Plan ADR</span><span class="modal-kv-val">${fmt(adrPlan)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">BAR</span><span class="modal-kv-val">${fmt(barVal)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Occ%</span><span class="modal-kv-val">${occ!=null?Math.round(occ*10)/10+'%':'—'}</span></div>`;
     body+='</div>';
