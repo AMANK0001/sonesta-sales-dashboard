@@ -234,7 +234,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('groups-cal',this)"><i class="ti ti-calendar-stats"></i> Groups cal</button>
   <button class="nav-tab" onclick="showPage('rev-cal',this)"><i class="ti ti-calendar-dollar"></i> Rev cal</button>
   <button class="nav-tab" onclick="showPage('actions',this)"><i class="ti ti-checklist"></i> Actions</button>
-  <button class="nav-tab" onclick="showPage('owner',this)"><i class="ti ti-file-dollar"></i> Owner Report</button>
+  <button class="nav-tab" onclick="showPage('owner',this)"><i class="ti ti-file-dollar"></i> Report</button>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -3626,7 +3626,7 @@ function renderOwnerReport(){
 
     <!-- SELECTED PERIOD — HIGHLIGHTED -->
     <div class="or-hero">
-      <div class="or-hero-label">${period.label} · ${fmtD(period.start)} – ${fmtD(period.end)}</div>
+      <div class="or-hero-label">Period · ${fmtD(period.start)} – ${fmtD(period.end)}</div>
       <div class="or-hero-big">${heroBig}</div>
       <div style="font-size:13px;opacity:.9">${heroSub}</div>
       <div style="margin-top:14px;font-size:13px;opacity:.95">
