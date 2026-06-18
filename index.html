@@ -487,11 +487,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
     <div class="tab-row" style="margin-bottom:0">
       <button class="ftab active" onclick="paceTab('curve',this)"><i class="ti ti-chart-line" style="font-size:11px"></i> Booking Curve</button>
+      <button class="ftab" onclick="paceTab('calendar',this)"><i class="ti ti-calendar-stats" style="font-size:11px"></i> Pace Calendar</button>
       <button class="ftab" onclick="paceTab('compare',this)"><i class="ti ti-arrows-diff" style="font-size:11px"></i> Compare Dates</button>
       <button class="ftab" onclick="paceTab('table',this)"><i class="ti ti-table" style="font-size:11px"></i> All Dates</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <button class="ftab" id="pace-prev" onclick="paceStep(-1)" title="Previous tracked date" style="padding:5px 9px"><i class="ti ti-chevron-left" style="font-size:13px"></i></button>
       <select id="pace-date" onchange="paceSelect(this.value)" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;min-width:190px"></select>
+      <button class="ftab" id="pace-next" onclick="paceStep(1)" title="Next tracked date" style="padding:5px 9px"><i class="ti ti-chevron-right" style="font-size:13px"></i></button>
       <button class="ftab" id="pace-demo-btn" onclick="togglePaceDemo()" title="Simulated booking curves for when the live log is still sparse">Demo mode</button>
     </div>
   </div>
@@ -554,6 +557,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         <span style="font-size:11px;color:var(--text3)">Click any row to open its booking curve</span>
       </div>
       <div style="overflow-x:auto"><div id="pace-table"></div></div>
+    </div>
+  </div>
+
+  <!-- Calendar panel — heatmap of pickup health -->
+  <div id="pacepanel-calendar" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.5rem">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="ftab" onclick="paceCalNav(-1)" style="padding:5px 9px"><i class="ti ti-chevron-left" style="font-size:13px"></i></button>
+          <span id="pace-cal-label" style="font-weight:700;font-size:15px;min-width:140px;text-align:center"></span>
+          <button class="ftab" onclick="paceCalNav(1)" style="padding:5px 9px"><i class="ti ti-chevron-right" style="font-size:13px"></i></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text2)">Color by:</span>
+          <select id="pace-cal-metric" onchange="renderPaceCalendar()" style="padding:5px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+            <option value="occ">Occupancy (how full)</option>
+            <option value="pace">7-day pace (momentum)</option>
+          </select>
+        </div>
+      </div>
+      <div class="legend" id="pace-cal-legend"></div>
+      <div class="cal-grid" id="pace-cal-grid"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px">Each day shows OTB occupancy and recent booking momentum. A glance tells you which future nights are filling, which are stalling, and where rate or sales action is needed. Click any tracked day to open its full booking curve. 🏟 = event night.</div>
     </div>
   </div>
 </div>
@@ -3166,15 +3192,31 @@ function renderRtdDetail(){
 // ── PACE — booking curves & rate elasticity ──────────────────────────────────
 // Source: Pickup Log (one row per stay date per daily snapshot)
 let paceDemoMode=false, paceSelDate=null, paceCurrentTab='curve';
+let paceCalState={year:2026,month:null}; // month set on first render
 
 function paceTab(tab,btn){
   paceCurrentTab=tab;
   document.querySelectorAll('#page-pace .tab-row .ftab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  ['curve','compare','table'].forEach(p=>document.getElementById('pacepanel-'+p).style.display=tab===p?'':'none');
+  ['curve','calendar','compare','table'].forEach(p=>{const el=document.getElementById('pacepanel-'+p);if(el)el.style.display=tab===p?'':'none';});
   if(tab==='curve') renderPaceCurve();
+  if(tab==='calendar') renderPaceCalendar();
   if(tab==='compare'){populatePaceCompare();renderPaceCompare();}
   if(tab==='table') renderPaceTable();
+}
+
+// Step through tracked dates with prev/next arrows
+function paceStep(dir){
+  const dates=paceDates();
+  if(!dates.length)return;
+  let i=dates.indexOf(paceSelDate);
+  if(i<0)i=0;
+  i=Math.max(0,Math.min(dates.length-1,i+dir));
+  paceSelDate=dates[i];
+  const sel=document.getElementById('pace-date');
+  if(sel)sel.value=paceSelDate;
+  renderPaceKPIs();
+  renderPaceCurve();
 }
 
 function togglePaceDemo(){
@@ -3297,8 +3339,15 @@ function renderPace(){
   }
   if(!paceSelDate||!dates.includes(paceSelDate))paceSelDate=dates[0];
   sel.value=paceSelDate;
+  // default pace calendar month to the first tracked date's month
+  if(paceCalState.month==null&&dates.length){
+    const fd=dates.find(d=>/^\d{4}-\d{2}-\d{2}$/.test(d));
+    if(fd){paceCalState.year=parseInt(fd.slice(0,4));paceCalState.month=parseInt(fd.slice(5,7));}
+    else{paceCalState.month=new Date().getMonth()+1;}
+  }
   renderPaceKPIs();
   if(paceCurrentTab==='curve')renderPaceCurve();
+  if(paceCurrentTab==='calendar')renderPaceCalendar();
   if(paceCurrentTab==='compare'){populatePaceCompare();renderPaceCompare();}
   if(paceCurrentTab==='table')renderPaceTable();
 }
@@ -3423,6 +3472,89 @@ function renderPaceCompare(){
         y:{min:0,suggestedMax:ROOMS_TOTAL+10,title:{display:true,text:'OTB rooms',font:{size:10},color:'#888780'},ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}
       }}
   });
+}
+
+function paceCalNav(dir){
+  if(paceCalState.month==null)paceCalState.month=new Date().getMonth()+1;
+  let m=paceCalState.month+dir, y=paceCalState.year;
+  if(m<1){m=12;y--;} if(m>12){m=1;y++;}
+  paceCalState.month=m; paceCalState.year=y;
+  renderPaceCalendar();
+}
+
+// Pace Calendar — heatmap. Each tracked future date colored by occupancy or 7-day momentum.
+// This is the "skim and understand" view: full nights vs soft nights, and which are gaining speed.
+function renderPaceCalendar(){
+  const grid=document.getElementById('pace-cal-grid');
+  const lbl=document.getElementById('pace-cal-label');
+  const leg=document.getElementById('pace-cal-legend');
+  if(!grid)return;
+  if(paceCalState.month==null) paceCalState.month=new Date().getMonth()+1;
+  const {year,month}=paceCalState;
+  const metric=document.getElementById('pace-cal-metric')?.value||'occ';
+  lbl.textContent=(MN_FULL[String(month).padStart(2,'0')]||month)+' '+year;
+
+  if(paceDemoMode){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;padding:2rem">The Pace Calendar uses live Pickup Log dates. Turn off Demo mode to see the heatmap of real tracked stay dates.</div>';
+    leg.innerHTML='';
+    return;
+  }
+
+  // Build lookup of tracked dates → stats
+  const dates=paceDates();
+  const stat={};
+  dates.forEach(d=>{
+    const rows=paceRowsFor(d);
+    if(!rows.length)return;
+    const latest=rows[rows.length-1];
+    const idx7=rows.length-1-7;
+    const p7=idx7>=0?latest.otb-rows[idx7].otb:null;
+    stat[d]={otb:latest.otb,occ:latest.otb/ROOMS_TOTAL*100,bar:latest.bar,dba:latest.dba,p7,snaps:rows.length};
+  });
+
+  // Legend
+  if(metric==='occ'){
+    leg.innerHTML=`<span><span class="legend-sq" style="background:#639922"></span>≥70% full</span>
+      <span><span class="legend-sq" style="background:#EF9F27"></span>40–69%</span>
+      <span><span class="legend-sq" style="background:#E24B4A"></span>&lt;40% soft</span>
+      <span><span class="legend-sq" style="background:var(--bg2)"></span>not tracked</span>`;
+  } else {
+    leg.innerHTML=`<span><span class="legend-sq" style="background:#1D9E75"></span>Gaining fast (+8)</span>
+      <span><span class="legend-sq" style="background:#639922"></span>Steady (+3–7)</span>
+      <span><span class="legend-sq" style="background:#888780"></span>Slow (0–2)</span>
+      <span><span class="legend-sq" style="background:#E24B4A"></span>Losing (cancels)</span>`;
+  }
+
+  const html=buildCalGrid(year,month,(dateStr,d,isToday)=>{
+    const dayNumHtml=isToday?`<span style="background:var(--chart-blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${d}</span>`:String(d);
+    const s=stat[dateStr];
+    const ev=!paceDemoMode?allEv.find(e=>e['Date']===dateStr):null;
+    const evTag=ev&&(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday'])?' 🏟':'';
+    if(!s){
+      return `<div class="cal-cell gray-cell${isToday?' today-cell':''}"><div class="cal-day-num">${dayNumHtml}${evTag}</div></div>`;
+    }
+    let colorClass,fillColor,pctClass;
+    if(metric==='occ'){
+      if(s.occ>=70){colorClass='green-cell';fillColor='#639922';pctClass='green';}
+      else if(s.occ>=40){colorClass='yellow-cell';fillColor='#EF9F27';pctClass='amber';}
+      else{colorClass='red-cell';fillColor='#E24B4A';pctClass='red';}
+    } else {
+      const v=s.p7;
+      if(v==null){colorClass='gray-cell';fillColor='#888780';pctClass='gray';}
+      else if(v>=8){colorClass='green-cell';fillColor='#1D9E75';pctClass='green';}
+      else if(v>=3){colorClass='green-cell';fillColor='#639922';pctClass='green';}
+      else if(v>=0){colorClass='gray-cell';fillColor='#888780';pctClass='gray';}
+      else{colorClass='red-cell';fillColor='#E24B4A';pctClass='red';}
+    }
+    const paceStr=s.p7!=null?(s.p7>=0?'+':'')+s.p7+'/wk':'—';
+    return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="paceSelect('${dateStr}')">
+      <div class="cal-day-num">${dayNumHtml}${evTag}</div>
+      <div class="cal-info bold">${Math.round(s.occ)}% · ${s.otb} rm</div>
+      <div class="cal-info">${s.bar!=null?fmt(s.bar):'—'} · ${paceStr}</div>
+      <div class="cal-bar-wrap"><div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(s.occ,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${s.dba}d out</div></div>
+    </div>`;
+  });
+  grid.innerHTML=html;
 }
 
 function renderPaceTable(){
