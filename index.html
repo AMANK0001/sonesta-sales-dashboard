@@ -2350,6 +2350,7 @@ function openRevDay(dateStr){
   const rv=allRv.find(r=>r['Date']===dateStr);
   const fc=allFc.find(r=>r['Date']===dateStr);
   const ev=allEv.find(r=>r['Date']===dateStr);
+  const ri=allRi.find(r=>r['Date']===dateStr);
   // Group blocks on property this night (from Block Info Raw)
   const biBlocks=allBi.filter(r=>r['Stay Date']===dateStr);
   const d=new Date(dateStr+'T12:00:00');
@@ -2395,6 +2396,27 @@ function openRevDay(dateStr){
     if(ev['Xfinity Center'])  body+=`<div class="modal-kv"><span class="modal-kv-label">🎵 Xfinity</span><span class="modal-kv-val">${ev['Xfinity Center']}</span></div>`;
     if(ev['Holiday'])         body+=`<div class="modal-kv"><span class="modal-kv-label">🎉 Holiday</span><span class="modal-kv-val">${ev['Holiday']}</span></div>`;
     if(ev['More'])            body+=`<div class="modal-kv"><span class="modal-kv-label">➕ More</span><span class="modal-kv-val">${ev['More']}</span></div>`;
+    body+='</div>';
+  }
+  // Competitor rates this night
+  if(ri){
+    const cs=calcCSRates(ri);
+    const hampton=n(ri['Hampton Inn']);
+    const comfort=n(ri['Comfort Inn']);
+    const myBar=fc?n(fc['BAR']):null;
+    // find lowest open comp and which hotel it is
+    let lowName='—', lowVal=null;
+    COMP_COLS.forEach(c=>{const v=n(ri[c]);if(v!=null&&v>0&&(lowVal==null||v<lowVal)){lowVal=v;lowName=c;}});
+    body+='<div class="modal-section"><div class="modal-section-title">Competitor rates</div>';
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Your BAR</span><span class="modal-kv-val" style="font-weight:700">${myBar!=null?fmt(myBar):'—'}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Comp set avg</span><span class="modal-kv-val">${cs.avg!=null?fmt(cs.avg)+' ('+cs.open+' open)':'—'}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Lowest comp${lowVal!=null?' — '+lowName:''}</span><span class="modal-kv-val" style="color:var(--chart-green)">${lowVal!=null?fmt(lowVal):'—'}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Hampton Inn</span><span class="modal-kv-val">${hampton!=null?fmt(hampton):'<span style="color:var(--text3)">closed / no data</span>'}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Comfort Inn</span><span class="modal-kv-val">${comfort!=null?fmt(comfort):'<span style="color:var(--text3)">closed / no data</span>'}</span></div>`;
+    if(myBar!=null&&cs.avg!=null){
+      const diff=myBar-cs.avg;
+      body+=`<div class="modal-kv"><span class="modal-kv-label">You vs comp avg</span><span class="modal-kv-val" style="color:${diff>0?'var(--chart-green)':diff<0?'var(--red)':'var(--text2)'}">${diff>0?'+':''}${fmt(diff)}</span></div>`;
+    }
     body+='</div>';
   }
   // Group blocks on property tonight — aggregate room types, only show blocks with rooms > 0
@@ -3337,7 +3359,14 @@ function renderPace(){
         return `<option value="${d}">${d}${tag}</option>`;
       }).join('')+'</optgroup>').join('');
   }
-  if(!paceSelDate||!dates.includes(paceSelDate))paceSelDate=dates[0];
+  if(!paceSelDate||!dates.includes(paceSelDate)){
+    if(paceDemoMode){ paceSelDate=dates[0]; }
+    else {
+      const today=getToday();
+      // nearest tracked date >= today, else last available
+      paceSelDate=dates.find(d=>d>=today)||dates[dates.length-1];
+    }
+  }
   sel.value=paceSelDate;
   // default pace calendar month to the first tracked date's month
   if(paceCalState.month==null&&dates.length){
@@ -3546,12 +3575,13 @@ function renderPaceCalendar(){
       else if(v>=0){colorClass='gray-cell';fillColor='#888780';pctClass='gray';}
       else{colorClass='red-cell';fillColor='#E24B4A';pctClass='red';}
     }
-    const paceStr=s.p7!=null?(s.p7>=0?'+':'')+s.p7+'/wk':'—';
+    const paceStr=s.p7!=null?(s.p7>=0?'+':'')+s.p7+'/wk':'';
     return `<div class="cal-cell ${colorClass}${isToday?' today-cell':''}" onclick="paceSelect('${dateStr}')">
       <div class="cal-day-num">${dayNumHtml}${evTag}</div>
-      <div class="cal-info bold">${Math.round(s.occ)}% · ${s.otb} rm</div>
-      <div class="cal-info">${s.bar!=null?fmt(s.bar):'—'} · ${paceStr}</div>
-      <div class="cal-bar-wrap"><div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(s.occ,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${s.dba}d out</div></div>
+      <div class="cal-info bold" style="font-size:13px">${Math.round(s.occ)}%</div>
+      <div class="cal-info">${s.otb} rm · ${s.bar!=null?fmt(s.bar):'—'}</div>
+      ${paceStr?`<div class="cal-info" style="color:${s.p7>0?'var(--chart-green)':s.p7<0?'var(--red)':'var(--text3)'}">${paceStr}</div>`:''}
+      <div class="cal-bar-wrap"><div class="cal-bar"><div class="cal-bar-fill" style="width:${Math.min(s.occ,100)}%;background:${fillColor}"></div></div><div class="cal-pct ${pctClass}">${s.dba}d</div></div>
     </div>`;
   });
   grid.innerHTML=html;
