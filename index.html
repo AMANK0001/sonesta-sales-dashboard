@@ -594,7 +594,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       <div class="card-title">Booking curve + rate overlay <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)" id="pace-curve-sub">· rooms accumulating toward arrival, BAR overlaid, rate changes marked</span></div>
       <div class="legend">
         <span><span class="legend-sq" style="background:#378ADD"></span>OTB rooms</span>
-        <span><span class="legend-line" style="background:#EF9F27"></span>BAR</span>
+        <span><span class="legend-line" style="background:#EF9F27"></span>Your BAR</span>
+        <span><span class="legend-line" style="background:#8B5CF6"></span>Hampton Inn</span>
         <span><span class="legend-line" style="background:#888780"></span>Capacity</span>
         <span style="color:#639922">▲ rate raised</span>
         <span style="color:#E24B4A">▼ rate dropped</span>
@@ -3479,26 +3480,39 @@ function renderPaceKPIs(){
   const rows=paceRowsFor(paceSelDate);
   if(!rows.length){el.innerHTML='';return;}
   const latest=rows[rows.length-1];
-  const occ=latest.otb/ROOMS_TOTAL*100;
   const idx7=rows.length-1-7, idx30=rows.length-1-30;
   const p7=idx7>=0?latest.otb-rows[idx7].otb:null;
   const p30=idx30>=0?latest.otb-rows[idx30].otb:null;
   const marks=paceRateMarks(rows);
+
+  // Event for this stay date
   const ev=!paceDemoMode?allEv.find(e=>e['Date']===paceSelDate):null;
   const evName=ev?(ev['Gillette Stadium']||ev['Xfinity Center']||ev['Holiday']||''):'';
-  const fc=!paceDemoMode?allFc.find(r=>r['Date']===paceSelDate):null;
-  const duettoFcst=fc?n(fc['Duetto Forecast Rooms']):null;
+  const evDetail=ev?(ev['Gillette Stadium']?'🏟 Gillette':ev['Xfinity Center']?'🎵 Xfinity':ev['Holiday']?'🎉 Holiday':''):'';
   const dow=!paceDemoMode&&/^\d{4}-\d{2}-\d{2}$/.test(paceSelDate)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(paceSelDate+'T12:00:00').getDay()]:'';
 
+  // Groups on the books for this stay date (from Block Info Raw, active blocks only)
+  const grpBlocks=!paceDemoMode?aggregateBiByBlockNight(allBi.filter(r=>r['Stay Date']===paceSelDate)).filter(e=>e.rooms>0):[];
+  const grpNames=grpBlocks.map(e=>{const pipe=allPi.find(p=>p['Block Code']===e.blockCode);return pipe?pipe['Block Name']:e.blockCode;});
+  const grpRooms=grpBlocks.reduce((s,e)=>s+e.rooms,0);
+
   el.innerHTML=`
-    <div class="mc"><div class="mc-label">Stay date</div><div class="mc-val" style="font-size:16px">${paceSelDate}</div><div class="mc-sub">${dow}${evName?' · 🏟 '+evName:''}</div></div>
-    <div class="mc"><div class="mc-label">Current OTB</div><div class="mc-val">${latest.otb}</div><div class="mc-sub">${latest.dba} days to arrival</div></div>
-    <div class="mc"><div class="mc-label">Occ%</div><div class="mc-val" style="color:${occ>=70?'var(--green)':occ<40?'var(--red)':'var(--amber)'}">${Math.round(occ)}%</div><div class="mc-sub">of ${ROOMS_TOTAL} rooms</div></div>
+    <div class="mc"><div class="mc-label">Stay date</div><div class="mc-val" style="font-size:16px">${paceSelDate}</div><div class="mc-sub">${dow} · ${latest.dba} days out</div></div>
+    <div class="mc" style="${evName?'border-left:3px solid var(--chart-amber)':''}">
+      <div class="mc-label">Event</div>
+      <div class="mc-val" style="font-size:${evName?'13px':'16px'};color:${evName?'var(--amber)':'var(--text3)'}">${evName||'—'}</div>
+      <div class="mc-sub">${evDetail||'No event this night'}</div>
+    </div>
+    <div class="mc" style="${grpBlocks.length?'border-left:3px solid var(--chart-green)':''}">
+      <div class="mc-label">Groups on property</div>
+      <div class="mc-val" style="font-size:${grpBlocks.length?'14px':'20px'};color:${grpBlocks.length?'var(--green)':'var(--text3)'}">${grpBlocks.length?grpNames.slice(0,1).join('')+(grpNames.length>1?' +'+( grpNames.length-1)+' more':''):'None'}</div>
+      <div class="mc-sub">${grpBlocks.length?grpRooms+' group rooms · '+grpBlocks.length+' block'+(grpBlocks.length>1?'s':''):'No group blocks this night'}</div>
+    </div>
+    <div class="mc"><div class="mc-label">Current OTB</div><div class="mc-val">${latest.otb}</div><div class="mc-sub">rooms on the books</div></div>
     <div class="mc"><div class="mc-label">Current BAR</div><div class="mc-val">${latest.bar!=null?fmt(latest.bar):'—'}</div></div>
     <div class="mc"><div class="mc-label">7-day pickup</div><div class="mc-val" style="color:${p7!=null&&p7>0?'var(--green)':p7!=null&&p7<0?'var(--red)':'var(--text)'}">${p7!=null?(p7>=0?'+':'')+p7:'—'}</div><div class="mc-sub">rooms in last 7 snapshots</div></div>
     <div class="mc"><div class="mc-label">30-day pickup</div><div class="mc-val">${p30!=null?(p30>=0?'+':'')+p30:'—'}</div><div class="mc-sub">${idx30<0?'log too young':'rooms in last 30 snapshots'}</div></div>
-    <div class="mc"><div class="mc-label">Rate changes</div><div class="mc-val">${marks.length}</div><div class="mc-sub">${marks.filter(m=>m.up).length} up · ${marks.filter(m=>!m.up).length} down</div></div>
-    ${duettoFcst!=null?`<div class="mc"><div class="mc-label">Duetto forecast</div><div class="mc-val">${Math.round(duettoFcst)}</div><div class="mc-sub">predicted final rooms</div></div>`:''}`;
+    <div class="mc"><div class="mc-label">Rate changes</div><div class="mc-val">${marks.length}</div><div class="mc-sub">${marks.filter(m=>m.up).length} up · ${marks.filter(m=>!m.up).length} down</div></div>`;
 }
 
 function renderPaceCurve(){
@@ -3512,28 +3526,50 @@ function renderPaceCurve(){
   const bar=rows.map(r=>r.bar);
   const vel=paceVelocity(rows);
   const marks=paceRateMarks(rows);
-  const maxBar=Math.max(...bar.filter(v=>v!=null),100);
+  const maxBarVal=Math.max(...bar.filter(v=>v!=null),100);
+
+  // Hampton Inn rate for each snapshot date
+  // rows have a snap date; we match it to Rate Intelligence
+  const hamptonLine=!paceDemoMode?rows.map(r=>{
+    const ri=allRi.find(x=>x['Date']===r.snap);
+    return ri?n(ri['Hampton Inn']):null;
+  }):labels.map(()=>null);
+  const hasHampton=hamptonLine.some(v=>v!=null);
+  const maxComp=hasHampton?Math.max(...hamptonLine.filter(v=>v!=null),maxBarVal):maxBarVal;
+
+  // Update legend dynamically
+  const curveSubEl=document.getElementById('pace-curve-sub');
+  if(curveSubEl)curveSubEl.textContent='· rooms accumulating toward arrival, your BAR vs Hampton Inn, rate change markers';
 
   if(charts.paceCurve)charts.paceCurve.destroy();
+
+  const datasets=[
+    {type:'line',label:'OTB',data:otb,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.10)',borderWidth:2.5,pointRadius:0,pointHitRadius:8,fill:true,tension:0.25,yAxisID:'y',order:3},
+    {type:'line',label:'Capacity',data:labels.map(()=>ROOMS_TOTAL),borderColor:'rgba(136,135,128,0.4)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,yAxisID:'y',order:4},
+    {type:'line',label:'Your BAR',data:bar,borderColor:'#EF9F27',borderWidth:2.5,borderDash:[5,3],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:1},
+  ];
+  if(hasHampton){
+    datasets.push({type:'line',label:'Hampton Inn',data:hamptonLine,borderColor:'#8B5CF6',borderWidth:2,borderDash:[3,2],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:2});
+  }
+
   charts.paceCurve=new Chart(cvC,{
-    data:{labels,datasets:[
-      {type:'line',label:'OTB',data:otb,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.10)',borderWidth:2.5,pointRadius:0,pointHitRadius:8,fill:true,tension:0.25,yAxisID:'y',order:2},
-      {type:'line',label:'Capacity',data:labels.map(()=>ROOMS_TOTAL),borderColor:'rgba(136,135,128,0.5)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,yAxisID:'y',order:3},
-      {type:'line',label:'BAR',data:bar,borderColor:'#EF9F27',borderWidth:2,borderDash:[5,3],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:1},
-    ]},
+    data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{callbacks:{
-        title:items=>'DBA '+items[0].label+' days',
-        label:c=>{
-          if(c.dataset.label==='Capacity')return null;
-          if(c.dataset.label==='BAR')return 'BAR: '+fmt(c.parsed.y);
-          const v=vel[c.dataIndex];
-          return 'OTB: '+c.parsed.y+' rooms'+(v!=null?' ('+(v>=0?'+':'')+v+' that day)':'');
-        }}}},
+      plugins:{
+        legend:{display:true,position:'top',align:'end',labels:{font:{size:11},color:'#888780',boxWidth:24,boxHeight:2,usePointStyle:false}},
+        tooltip:{callbacks:{
+          title:items=>'DBA '+items[0].label+' days',
+          label:c=>{
+            if(c.dataset.label==='Capacity')return null;
+            if(c.dataset.label==='Your BAR')return 'Your BAR: '+(c.parsed.y!=null?fmt(c.parsed.y):'no data');
+            if(c.dataset.label==='Hampton Inn')return 'Hampton Inn: '+(c.parsed.y!=null?fmt(c.parsed.y):'closed');
+            const v=vel[c.dataIndex];
+            return 'OTB: '+c.parsed.y+' rooms'+(v!=null?' ('+(v>=0?'+':'')+v+' that day)':'');
+          }}}},
       scales:{
         x:{title:{display:true,text:'Days before arrival →',font:{size:10},color:'#888780'},ticks:{maxTicksLimit:14,font:{size:10},color:'#888780'},grid:{display:false}},
         y:{min:0,suggestedMax:ROOMS_TOTAL+10,position:'left',title:{display:true,text:'Rooms',font:{size:10},color:'#378ADD'},ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},
-        y1:{position:'right',suggestedMax:maxBar*1.15,title:{display:true,text:'BAR $',font:{size:10},color:'#EF9F27'},ticks:{callback:v=>'$'+v,font:{size:10},color:'#EF9F27'},grid:{display:false}}
+        y1:{position:'right',suggestedMax:Math.max(maxComp,maxBarVal)*1.15,title:{display:true,text:'Rate $',font:{size:10},color:'#EF9F27'},ticks:{callback:v=>'$'+v,font:{size:10},color:'#888780'},grid:{display:false}}
       }},
     plugins:[paceMarkerPlugin(marks)]
   });
