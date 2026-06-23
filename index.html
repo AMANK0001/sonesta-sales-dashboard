@@ -3528,14 +3528,12 @@ function renderPaceCurve(){
   const marks=paceRateMarks(rows);
   const maxBarVal=Math.max(...bar.filter(v=>v!=null),100);
 
-  // Hampton Inn rate for each snapshot date
-  // rows have a snap date; we match it to Rate Intelligence
-  const hamptonLine=!paceDemoMode?rows.map(r=>{
-    const ri=allRi.find(x=>x['Date']===r.snap);
-    return ri?n(ri['Hampton Inn']):null;
-  }):labels.map(()=>null);
-  const hasHampton=hamptonLine.some(v=>v!=null);
-  const maxComp=hasHampton?Math.max(...hamptonLine.filter(v=>v!=null),maxBarVal):maxBarVal;
+  // Hampton Inn benchmark — today's current rate for this stay date, shown as flat line
+  // Not a pace line — just a constant reference so you can see if your BAR is above/below Hampton right now
+  const riToday=!paceDemoMode?allRi.find(r=>r['Date']===paceSelDate):null;
+  const hamptonRate=riToday?n(riToday['Hampton Inn']):null;
+  const hasHampton=hamptonRate!=null&&hamptonRate>0;
+  const maxComp=hasHampton?Math.max(hamptonRate,maxBarVal):maxBarVal;
 
   // Update legend dynamically
   const curveSubEl=document.getElementById('pace-curve-sub');
@@ -3549,7 +3547,7 @@ function renderPaceCurve(){
     {type:'line',label:'Your BAR',data:bar,borderColor:'#EF9F27',borderWidth:2.5,borderDash:[5,3],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:1},
   ];
   if(hasHampton){
-    datasets.push({type:'line',label:'Hampton Inn',data:hamptonLine,borderColor:'#8B5CF6',borderWidth:2,borderDash:[3,2],pointRadius:0,pointHitRadius:8,stepped:true,fill:false,yAxisID:'y1',order:2});
+    datasets.push({type:'line',label:'Hampton Inn',data:labels.map(()=>hamptonRate),borderColor:'#8B5CF6',borderWidth:1.5,borderDash:[3,2],pointRadius:0,pointHitRadius:8,fill:false,yAxisID:'y1',order:2});
   }
 
   charts.paceCurve=new Chart(cvC,{
@@ -3562,7 +3560,7 @@ function renderPaceCurve(){
           label:c=>{
             if(c.dataset.label==='Capacity')return null;
             if(c.dataset.label==='Your BAR')return 'Your BAR: '+(c.parsed.y!=null?fmt(c.parsed.y):'no data');
-            if(c.dataset.label==='Hampton Inn')return 'Hampton Inn: '+(c.parsed.y!=null?fmt(c.parsed.y):'closed');
+            if(c.dataset.label==='Hampton Inn')return 'Hampton Inn (now): '+(hamptonRate!=null?fmt(hamptonRate):'no data');
             const v=vel[c.dataIndex];
             return 'OTB: '+c.parsed.y+' rooms'+(v!=null?' ('+(v>=0?'+':'')+v+' that day)':'');
           }}}},
