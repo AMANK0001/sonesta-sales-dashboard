@@ -898,11 +898,28 @@ function buildMetadata(){
     ...RAW_PAYROLL.map(p=>parseDate(p.startDate).slice(0,4))
   ].filter(Boolean))].sort();
   ALL_DATES=[...new Set(allShifts.map(s=>s.date))].sort();
+  // Default the Waterfall + Calendar to TODAY (or the nearest available date)
+  const todayStr=new Date().toISOString().slice(0,10);
   if(ALL_DATES.length){
-    const d=new Date(ALL_DATES[0]+'T12:00:00');
+    let idx=ALL_DATES.indexOf(todayStr);
+    if(idx<0){
+      // nearest available date to today (smallest absolute day difference)
+      const tMs=new Date(todayStr+'T12:00:00').getTime();
+      let best=0,bestDiff=Infinity;
+      ALL_DATES.forEach((ds,i)=>{
+        const diff=Math.abs(new Date(ds+'T12:00:00').getTime()-tMs);
+        if(diff<bestDiff){bestDiff=diff;best=i;}
+      });
+      idx=best;
+    }
+    WF_DATE_IDX=idx;
+    const d=new Date(ALL_DATES[idx]+'T12:00:00');
+    CAL_MONTH=d.getMonth();CAL_YEAR=d.getFullYear();
+  } else {
+    WF_DATE_IDX=0;
+    const d=new Date(todayStr+'T12:00:00');
     CAL_MONTH=d.getMonth();CAL_YEAR=d.getFullYear();
   }
-  WF_DATE_IDX=0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -939,6 +956,7 @@ function populateAllDropdowns(){
 
   const wds=document.getElementById('wf-date-sel');
   wds.innerHTML=ALL_DATES.map(d=>`<option value="${d}">${d}</option>`).join('');
+  if(ALL_DATES[WF_DATE_IDX]) wds.value=ALL_DATES[WF_DATE_IDX];
   updateWFDateLabel();
 }
 
@@ -1343,7 +1361,14 @@ function pgRenderCalendar(){
 
   const months={};
   dates.forEach(d=>{const key=d.slice(0,7);if(!months[key])months[key]=[];months[key].push(d);});
-  const sortedMonths=Object.keys(months).sort();
+  // Order so the CURRENT month leads, then upcoming months, then past months.
+  const nowKey=new Date().toISOString().slice(0,7);
+  const sortedMonths=Object.keys(months).sort((a,b)=>{
+    const aFuture=a>=nowKey, bFuture=b>=nowKey;
+    if(aFuture&&bFuture) return a<b?-1:1;     // both current/future → ascending
+    if(!aFuture&&!bFuture) return a>b?-1:1;    // both past → most-recent first
+    return aFuture?-1:1;                        // current/future before past
+  });
 
   let html='';
   sortedMonths.forEach(monthKey=>{
