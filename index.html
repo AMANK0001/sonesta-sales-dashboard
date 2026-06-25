@@ -4061,23 +4061,27 @@ function dayDiff(a,b){
   return Math.round((da-db)/86400000);
 }
 
-// Gap is only meaningful when the booking was made on the arrival date or one day before,
-// because only then does the stay-date BAR reflect the rate being sold at booking time.
+// Gap is only meaningful when the booking was made within 3 days before arrival
+// (booked on arrival date, or up to 3 days prior), because only then does the
+// stay-date BAR reflect the rate being sold at booking time.
 function gapQualifies(r){
   const arr=r['Arrival'], bk=r['Booking Date'];
   if(!arr||!bk)return false;
   const d=dayDiff(arr,bk); // arrival - booking
-  return d===0||d===1;
+  return d!=null && d>=0 && d<=3;
 }
 
-// Real gap % for a reservation (BAR vs ADR), or null if not qualifying / missing data
+// Real gap % for a reservation (BAR vs ADR), or null if not qualifying / missing
+// data / gap is zero or negative.
 function reservationGap(r){
   const adr=n(r['ADR per Night']);
   if(adr==null||adr<=0)return null;
   if(!gapQualifies(r))return null;
   const bar=barForDate(r['Arrival']);
   if(bar==null||bar<=0)return null;
-  return {gap:(bar-adr)/bar*100, bar, adr};
+  const gap=(bar-adr)/bar*100;
+  if(gap<=0)return null; // ignore zero/negative gap
+  return {gap, bar, adr};
 }
 
 function renderReservations(){
@@ -4207,7 +4211,7 @@ function renderResChanOverview(){
     </tr>`;
   });
   tbl+='</tbody></table>';
-  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Avg BAR uses all posted reservations. Gap % is computed only from same-day / next-day bookings (booked on the arrival date or one day before), where the stay-date BAR reliably reflects the rate sold at booking time — a clean proxy for channel rate erosion. Channels with no such bookings show "—".</div>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Avg BAR and ADR use all posted reservations. Gap % is computed only from bookings made within 3 days of arrival (booked on the arrival date or up to 3 days before) and only where the gap is positive — that is when the stay-date BAR reliably reflects the rate sold at booking time, a clean proxy for channel rate erosion. Channels with no such bookings show "—".</div>';
   document.getElementById('res-chan-tbl').innerHTML=tbl;
 }
 
@@ -4469,7 +4473,7 @@ function renderResFuture(){
     </tr>`;
   });
   tbl+='</tbody></table>';
-  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Avg BAR uses all future posted rows. Gap % is from same-day / next-day bookings only (booked on arrival date or one day before). Unposted $0-ADR bookings are excluded from ADR and gap.</div>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Avg BAR uses all future posted rows. Gap % is from bookings made within 3 days of arrival with a positive gap. Unposted $0-ADR bookings are excluded from ADR and gap.</div>';
   document.getElementById('res-future-tbl').innerHTML=tbl;
 }
 
