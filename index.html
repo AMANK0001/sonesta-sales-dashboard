@@ -493,10 +493,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="metric-grid" id="res-kpis"></div>
   <div class="tab-row" style="margin-bottom:1rem">
     <button class="ftab active" onclick="resTab('channels',this)"><i class="ti ti-chart-bar" style="font-size:11px"></i> Channel Overview</button>
+    <button class="ftab" onclick="resTab('future',this)"><i class="ti ti-calendar-up" style="font-size:11px"></i> Future (on the books)</button>
     <button class="ftab" onclick="resTab('cancels',this)"><i class="ti ti-x" style="font-size:11px"></i> Cancellations &amp; No-Shows</button>
     <button class="ftab" onclick="resTab('leadtime',this)"><i class="ti ti-clock" style="font-size:11px"></i> Lead Time</button>
     <button class="ftab" onclick="resTab('locality',this)"><i class="ti ti-map-pin" style="font-size:11px"></i> Guest Origin</button>
     <button class="ftab" onclick="resTab('detail',this)"><i class="ti ti-table" style="font-size:11px"></i> Full Detail</button>
+  </div>
+
+  <!-- Future / On the books -->
+  <div id="respanel-future" style="display:none">
+    <div class="alert" style="background:var(--blue-bg);color:var(--blue);margin-bottom:1rem">
+      <i class="ti ti-info-circle"></i>
+      <span>Reservations with arrival after today — what's already on the books by channel. Revenue is committed (folio not yet posted), so ADR here is the contracted rate per reservation.</span>
+    </div>
+    <div class="metric-grid" id="res-future-kpis"></div>
+    <div class="two-col">
+      <div class="card"><div class="card-title">Future revenue on the books by channel</div><div class="chart-wrap-lg"><canvas id="resFutRevChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Future reservations by channel</div><div class="chart-wrap-lg"><canvas id="resFutVolChart"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-title">Future channel scorecard — bookings, on-the-books revenue, room nights, ADR, lead time</div><div id="res-future-tbl"></div></div>
   </div>
 
   <!-- Channel Overview -->
@@ -562,6 +577,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           <option value="BAR">BAR / Direct</option>
           <option value="COR">Corporate</option>
           <option value="GRP">Group</option>
+        </select>
+        <select id="res-month-filter" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+          <option value="all">All months</option>
+          <option value="2026-01">January</option><option value="2026-02">February</option>
+          <option value="2026-03">March</option><option value="2026-04">April</option>
+          <option value="2026-05">May</option><option value="2026-06">June</option>
+          <option value="2026-07">July</option><option value="2026-08">August</option>
+          <option value="2026-09">September</option><option value="2026-10">October</option>
+          <option value="2026-11">November</option><option value="2026-12">December</option>
+        </select>
+        <select id="res-sort" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+          <option value="arrival">Sort: Arrival ↑</option>
+          <option value="arrival-desc">Arrival ↓</option>
+          <option value="adr-desc">ADR (high→low)</option>
+          <option value="adr">ADR (low→high)</option>
+          <option value="rev-desc">Revenue (high→low)</option>
+          <option value="diff-desc">Biggest BAR gap %</option>
+          <option value="lead-desc">Lead time (long→short)</option>
         </select>
         <span id="res-detail-count" style="font-size:11px;color:var(--text3)"></span>
       </div>
@@ -3992,14 +4025,22 @@ function resTab(tab,btn){
   resCurrentTab=tab;
   document.querySelectorAll('#page-reservations .tab-row .ftab').forEach(t=>t.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  ['channels','cancels','leadtime','locality','detail'].forEach(p=>{
+  ['channels','future','cancels','leadtime','locality','detail'].forEach(p=>{
     const el=document.getElementById('respanel-'+p); if(el)el.style.display=tab===p?'':'none';
   });
   if(tab==='channels')  renderResChanOverview();
+  if(tab==='future')    renderResFuture();
   if(tab==='cancels')   renderResCancels();
   if(tab==='leadtime')  renderResLeadTime();
   if(tab==='locality')  renderResLocality();
   if(tab==='detail')    renderResDetail();
+}
+
+// Stay-date BAR: the BAR being sold for a reservation's arrival night (from Daily Forecast)
+function barForDate(dateStr){
+  if(!dateStr)return null;
+  const fc=allFc.find(r=>r['Date']===dateStr);
+  return fc?n(fc['BAR']):null;
 }
 
 function renderReservations(){
@@ -4074,8 +4115,23 @@ function renderResChanOverview(){
               y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
   });
 
+  // Per-channel avg BAR (stay-date) and avg discount vs BAR, from Reservation Raw posted rows
+  // Keyed by Source Code (matches Channel Performance), fallback to Channel name
+  const barByChan={};
+  allCp.forEach(r=>{
+    if(r['Locality']==='House/Comp')return;
+    const adr=n(r['ADR per Night']); if(adr==null||adr<=0)return; // only posted rows
+    const bar=barForDate(r['Arrival']); if(bar==null||bar<=0)return;
+    const key=(r['Source Code']||r['Channel']||'?');
+    if(!barByChan[key])barByChan[key]={barSum:0,adrSum:0,nights:0};
+    const nights=n(r['Room Nights'])||1;
+    barByChan[key].barSum+=bar*nights;
+    barByChan[key].adrSum+=adr*nights;
+    barByChan[key].nights+=nights;
+  });
+
   // Scorecard table
-  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Channel</th><th>Market</th><th>Reservations</th><th>Revenue</th><th>Share</th><th>ADR</th><th>Avg Lead</th><th>Cancel %</th><th>No-show %</th></tr></thead><tbody>';
+  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Channel</th><th>Market</th><th>Reservations</th><th>Revenue</th><th>Share</th><th>ADR</th><th>Avg BAR</th><th>Gap %</th><th>Avg Lead</th><th>Cancel %</th><th>No-show %</th></tr></thead><tbody>';
   sorted.forEach(r=>{
     const res=n(r['Reservations'])||0;
     const rev=n(r['Room Revenue'])||0;
@@ -4085,6 +4141,12 @@ function renderResChanOverview(){
     const cp=n(r['Cancel %']); const nsp=n(r['No Show %']);
     const share=totalRev>0?rev/totalRev*100:0;
     const mktBadge=r['Market Type']?`<span class="chip chip-gray" style="font-size:10px">${r['Market Type']}</span>`:'';
+    // BAR comparison
+    const bc=barByChan[r['Source Code']]||barByChan[r['Channel']];
+    const avgBar=bc&&bc.nights>0?bc.barSum/bc.nights:null;
+    const avgAdr=bc&&bc.nights>0?bc.adrSum/bc.nights:null;
+    const gap=(avgBar!=null&&avgAdr!=null&&avgBar>0)?(avgBar-avgAdr)/avgBar*100:null;
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
     tbl+=`<tr>
       <td style="padding:9px 14px;font-weight:600">${r['Channel']}<div style="font-size:10px;color:var(--text3)">${r['Source Code']||''}</div></td>
       <td>${mktBadge}</td>
@@ -4092,12 +4154,15 @@ function renderResChanOverview(){
       <td style="font-weight:600">${rev>0?fmt(rev):'—'}</td>
       <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:var(--chart-blue);height:100%"></div></div><span style="font-size:11px">${Math.round(share)}%</span></div></td>
       <td>${adr!=null?fmt(adr):'—'}</td>
+      <td style="color:var(--text2)">${avgBar!=null?fmt(avgBar):'—'}</td>
+      <td style="font-weight:600;color:${gapColor}">${gap!=null?(gap>=0?'':'+')+Math.round(Math.abs(gap))+'%':'—'}</td>
       <td>${lead!=null?Math.round(lead)+'d':'—'}</td>
       <td style="color:${cp!=null&&cp>25?'var(--red)':cp!=null&&cp>15?'var(--amber)':'var(--text)'}">${cp!=null?Math.round(cp)+'%':'—'}</td>
       <td style="color:${nsp!=null&&nsp>5?'var(--red)':'var(--text)'}">${nsp!=null?Math.round(nsp)+'%':'—'}</td>
     </tr>`;
   });
   tbl+='</tbody></table>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Gap % = how far each channel\'s realized ADR sits below the BAR being sold for those stay dates — a proxy for OTA commission and rate erosion. Computed from posted reservations only.</div>';
   document.getElementById('res-chan-tbl').innerHTML=tbl;
 }
 
@@ -4218,6 +4283,8 @@ function renderResDetail(){
   const search=(document.getElementById('res-search')?.value||'').toLowerCase();
   const statusF=document.getElementById('res-status-filter')?.value||'all';
   const marketF=document.getElementById('res-market-filter')?.value||'all';
+  const monthF=document.getElementById('res-month-filter')?.value||'all';
+  const sortMode=document.getElementById('res-sort')?.value||'arrival';
 
   if(!allCp.length){el.innerHTML='<div class="empty">Reservation Raw tab not found.</div>';return;}
 
@@ -4225,35 +4292,138 @@ function renderResDetail(){
     if(r['Locality']==='House/Comp')return false;
     if(statusF!=='all'&&r['Resv Status']!==statusF)return false;
     if(marketF!=='all'&&!(r['Market Code']||'').startsWith(marketF))return false;
+    if(monthF!=='all'&&!((r['Arrival']||'').startsWith(monthF)))return false;
     if(search&&!((r['Channel']||'')+(r['Source Code']||'')+(r['Market Desc']||'')+(r['Rate Code']||'')).toLowerCase().includes(search))return false;
     return true;
+  });
+
+  // Precompute BAR + gap per row
+  rows=rows.map(r=>{
+    const adr=n(r['ADR per Night']);
+    const bar=barForDate(r['Arrival']);
+    const gap=(adr!=null&&adr>0&&bar!=null&&bar>0)?(bar-adr)/bar*100:null;
+    return {...r,_adr:adr,_bar:bar,_gap:gap,_rev:n(r['Room Revenue']),_lead:n(r['Lead Time Days'])};
+  });
+
+  // Sort
+  rows.sort((a,b)=>{
+    switch(sortMode){
+      case 'arrival-desc': return (b['Arrival']||'').localeCompare(a['Arrival']||'');
+      case 'adr-desc': return (b._adr||-1)-(a._adr||-1);
+      case 'adr': return (a._adr||1e9)-(b._adr||1e9);
+      case 'rev-desc': return (b._rev||-1)-(a._rev||-1);
+      case 'diff-desc': return (b._gap==null?-1e9:b._gap)-(a._gap==null?-1e9:a._gap);
+      case 'lead-desc': return (b._lead||-1)-(a._lead||-1);
+      default: return (a['Arrival']||'').localeCompare(b['Arrival']||'');
+    }
   });
 
   const countEl=document.getElementById('res-detail-count');
   if(countEl)countEl.textContent=rows.length.toLocaleString()+' reservations';
 
-  const showRows=rows.slice(0,200); // cap at 200 for perf
-  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Conf#</th><th>Arrival</th><th>Nights</th><th>Channel</th><th>Rate Code</th><th>Market</th><th>Status</th><th>ADR</th><th>Revenue</th><th>Lead</th><th>Origin</th></tr></thead><tbody>';
-  showRows.forEach(r=>{
+  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Conf#</th><th>Arrival</th><th>Nights</th><th>Channel</th><th>Rate Code</th><th>Status</th><th>ADR</th><th>BAR</th><th>Gap %</th><th>Revenue</th><th>Lead</th><th>Origin</th></tr></thead><tbody>';
+  rows.forEach(r=>{
     const statusColor=r['Resv Status']==='CANCELLED'?'var(--red)':r['Resv Status']==='NO SHOW'?'var(--amber)':r['Resv Status']==='CHECKED OUT'?'var(--text3)':'var(--text)';
-    const rev=n(r['Room Revenue']); const adr=n(r['ADR per Night']);
+    const adr=r._adr, bar=r._bar, gap=r._gap, rev=r._rev;
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
     tbl+=`<tr>
       <td style="padding:9px 14px;font-family:monospace;font-size:11px">${r['Conf Number']||'—'}</td>
       <td>${r['Arrival']||'—'}</td>
       <td>${r['Room Nights']||'—'}</td>
       <td><div style="font-weight:600;font-size:12px">${r['Channel']||'—'}</div><div style="font-size:10px;color:var(--text3)">${r['Source Code']||''}</div></td>
       <td style="font-size:11px;color:var(--text2)">${r['Rate Code']||'—'}</td>
-      <td style="font-size:11px">${r['Market Desc']||r['Market Code']||'—'}</td>
       <td style="color:${statusColor};font-size:11px;font-weight:600">${r['Resv Status']||'—'}</td>
-      <td>${adr!=null&&adr>0?fmt(adr):'—'}</td>
-      <td style="font-weight:600">${rev!=null&&rev>0?fmt(rev):'—'}</td>
+      <td style="font-weight:600">${adr!=null&&adr>0?fmt(adr):'—'}</td>
+      <td style="color:var(--text2)">${bar!=null?fmt(bar):'—'}</td>
+      <td style="font-weight:600;color:${gapColor}">${gap!=null?(gap>=0?'':'+')+Math.round(Math.abs(gap))+'%':'—'}</td>
+      <td>${rev!=null&&rev>0?fmt(rev):'—'}</td>
       <td style="font-size:11px;color:var(--text2)">${r['Lead Time Days']||'—'}d</td>
       <td style="font-size:11px;color:var(--text3)">${r['Locality']||'—'}</td>
     </tr>`;
   });
-  if(rows.length>200)tbl+=`<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:12px">Showing 200 of ${rows.length.toLocaleString()} rows — use filters to narrow</td></tr>`;
   tbl+='</tbody></table>';
   el.innerHTML=tbl;
+}
+
+// ── FUTURE / ON THE BOOKS — channel breakdown for arrival > today ─────────────
+function renderResFuture(){
+  const today=getToday();
+  const rows=allCp.filter(r=>r['Locality']!=='House/Comp'&&r['Arrival']&&r['Arrival']>today
+    && !['CANCELLED','NO SHOW'].includes(r['Resv Status']));
+  if(!rows.length){
+    document.getElementById('res-future-kpis').innerHTML='<div class="empty" style="grid-column:1/-1">No future reservations found in Reservation Raw.</div>';
+    document.getElementById('res-future-tbl').innerHTML='';
+    return;
+  }
+
+  // Aggregate by channel (Source Code)
+  const chMap={};
+  rows.forEach(r=>{
+    const key=r['Source Code']||r['Channel']||'?';
+    if(!chMap[key])chMap[key]={channel:r['Channel']||key,source:r['Source Code']||'',market:r['Market Code']||'',res:0,nights:0,rev:0,leadSum:0,leadCnt:0,barSum:0,barNights:0,adrSum:0};
+    const c=chMap[key];
+    c.res++;
+    const nights=n(r['Room Nights'])||0;
+    c.nights+=nights;
+    c.rev+=(n(r['Room Revenue'])||0);
+    const lead=n(r['Lead Time Days']); if(lead!=null){c.leadSum+=lead;c.leadCnt++;}
+    // contracted ADR per night (may be 0 for unposted future)
+    const adr=n(r['ADR per Night']);
+    const bar=barForDate(r['Arrival']);
+    if(adr!=null&&adr>0&&nights>0){c.adrSum+=adr*nights;}
+    if(bar!=null&&bar>0&&nights>0&&adr!=null&&adr>0){c.barSum+=bar*nights;c.barNights+=nights;}
+  });
+  const chans=Object.values(chMap).sort((a,b)=>b.rev-a.rev||b.res-a.res);
+  const totRes=chans.reduce((s,c)=>s+c.res,0);
+  const totNights=chans.reduce((s,c)=>s+c.nights,0);
+  const totRev=chans.reduce((s,c)=>s+c.rev,0);
+
+  document.getElementById('res-future-kpis').innerHTML=`
+    <div class="mc"><div class="mc-label">Future reservations</div><div class="mc-val">${totRes.toLocaleString()}</div><div class="mc-sub">arrival after today</div></div>
+    <div class="mc"><div class="mc-label">Future room nights</div><div class="mc-val">${totNights.toLocaleString()}</div><div class="mc-sub">on the books</div></div>
+    <div class="mc"><div class="mc-label">Future revenue on books</div><div class="mc-val">${fmtK(totRev)}</div><div class="mc-sub">committed (folio not posted)</div></div>
+    <div class="mc"><div class="mc-label">Top future channel</div><div class="mc-val" style="font-size:15px">${chans.length?chans[0].channel:'—'}</div><div class="mc-sub">${chans.length?fmtK(chans[0].rev)+' on books':''}</div></div>`;
+
+  const topN=chans.slice(0,12);
+  const COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A','#888780','#A32D2D','#EF9F27','#1D9E75','#378ADD','#639922'];
+
+  if(charts.resFutRev)charts.resFutRev.destroy();
+  charts.resFutRev=new Chart(document.getElementById('resFutRevChart'),{
+    type:'bar',data:{labels:topN.map(c=>c.channel),datasets:[{label:'Revenue',data:topN.map(c=>c.rev),backgroundColor:COLORS,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)}}},
+      scales:{x:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
+  });
+  if(charts.resFutVol)charts.resFutVol.destroy();
+  charts.resFutVol=new Chart(document.getElementById('resFutVolChart'),{
+    type:'bar',data:{labels:topN.map(c=>c.channel),datasets:[{label:'Reservations',data:topN.map(c=>c.res),backgroundColor:COLORS,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.x.toLocaleString()+' reservations'}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
+  });
+
+  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Channel</th><th>Reservations</th><th>Room Nights</th><th>Revenue on books</th><th>Share</th><th>ADR</th><th>Avg BAR</th><th>Gap %</th><th>Avg Lead</th></tr></thead><tbody>';
+  chans.forEach(c=>{
+    const share=totRev>0?c.rev/totRev*100:0;
+    const adr=c.nights>0&&c.adrSum>0?c.adrSum/c.nights:null;
+    const avgBar=c.barNights>0?c.barSum/c.barNights:null;
+    const avgAdrMatched=c.barNights>0?c.adrSum/c.barNights:null;
+    const gap=(avgBar!=null&&avgAdrMatched!=null&&avgBar>0)?(avgBar-avgAdrMatched)/avgBar*100:null;
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
+    const lead=c.leadCnt>0?c.leadSum/c.leadCnt:null;
+    tbl+=`<tr>
+      <td style="padding:9px 14px;font-weight:600">${c.channel}<div style="font-size:10px;color:var(--text3)">${c.source}</div></td>
+      <td style="font-weight:600">${c.res.toLocaleString()}</td>
+      <td>${c.nights.toLocaleString()}</td>
+      <td style="font-weight:600">${c.rev>0?fmt(c.rev):'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:var(--chart-green);height:100%"></div></div><span style="font-size:11px">${Math.round(share)}%</span></div></td>
+      <td>${adr!=null?fmt(adr):'<span style="color:var(--text3)">unposted</span>'}</td>
+      <td style="color:var(--text2)">${avgBar!=null?fmt(avgBar):'—'}</td>
+      <td style="font-weight:600;color:${gapColor}">${gap!=null?(gap>=0?'':'+')+Math.round(Math.abs(gap))+'%':'—'}</td>
+      <td>${lead!=null?Math.round(lead)+'d':'—'}</td>
+    </tr>`;
+  });
+  tbl+='</tbody></table>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Future bookings often have $0 posted ADR until the folio settles — those show "unposted" and are excluded from the gap calculation.</div>';
+  document.getElementById('res-future-tbl').innerHTML=tbl;
 }
 
 loadAll();
