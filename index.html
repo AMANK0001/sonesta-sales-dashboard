@@ -4043,6 +4043,39 @@ function barForDate(dateStr){
   return fc?n(fc['BAR']):null;
 }
 
+// Channel class by Source Code → 'ota' | 'direct' | 'other'
+const OTA_SOURCES=['EXPDC','BOOKINGDC','AGODA','BNBERRY','WEBBEDS','HBEDS','CLC','VIO','WB','DAYUSE'];
+const DIRECT_SOURCES=['TEL','EML','AA','WALK','SLS','WEB','NGVA','1A','UA','1P'];
+function channelClass(src){
+  const s=(src||'').toUpperCase();
+  if(OTA_SOURCES.includes(s))return 'ota';
+  if(DIRECT_SOURCES.includes(s))return 'direct';
+  return 'other';
+}
+
+// Adjusted gap % for one reservation, applying the channel floor rules.
+// Returns {gap, bar, adjusted} — gap is the % BAR is above ADR; bar is the (possibly synthetic) BAR used.
+// OTA: if real gap < 16.5% → force 20% (bar = adr*1.2)
+// Direct: if real gap < 0% → force ~9.1% (bar = adr*1.1)
+// Other: gap = 0
+function adjustedGap(r){
+  const adr=n(r['ADR per Night']);
+  const cls=channelClass(r['Source Code']);
+  if(adr==null||adr<=0) return {gap:null,bar:null,adjusted:false};
+  if(cls==='other') return {gap:0,bar:adr,adjusted:true};
+  const rawBar=barForDate(r['Arrival']);
+  const realGap=(rawBar!=null&&rawBar>0)?(rawBar-adr)/rawBar*100:null;
+  if(cls==='ota'){
+    if(realGap==null||realGap<16.5){const bar=adr*1.20;return {gap:(bar-adr)/bar*100,bar,adjusted:true};}
+    return {gap:realGap,bar:rawBar,adjusted:false};
+  }
+  if(cls==='direct'){
+    if(realGap==null||realGap<0){const bar=adr*1.10;return {gap:(bar-adr)/bar*100,bar,adjusted:true};}
+    return {gap:realGap,bar:rawBar,adjusted:false};
+  }
+  return {gap:0,bar:adr,adjusted:true};
+}
+
 function renderReservations(){
   if(!allCpCh.length&&!allCp.length){
     document.getElementById('res-kpis').innerHTML=`<div class="empty" style="grid-column:1/-1">
@@ -4115,17 +4148,18 @@ function renderResChanOverview(){
               y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
   });
 
-  // Per-channel avg BAR (stay-date) and avg discount vs BAR, from Reservation Raw posted rows
-  // Keyed by Source Code (matches Channel Performance), fallback to Channel name
+  // Per-channel avg BAR (adjusted) and avg gap, from Reservation Raw posted rows.
+  // Applies channel floor rules; EXCLUDES reservations whose final gap <= 0.
   const barByChan={};
   allCp.forEach(r=>{
     if(r['Locality']==='House/Comp')return;
-    const adr=n(r['ADR per Night']); if(adr==null||adr<=0)return; // only posted rows
-    const bar=barForDate(r['Arrival']); if(bar==null||bar<=0)return;
+    const adr=n(r['ADR per Night']); if(adr==null||adr<=0)return; // posted rows only
+    const ag=adjustedGap(r);
+    if(ag.gap==null||ag.gap<=0)return; // exclude zero/negative gap from averages
     const key=(r['Source Code']||r['Channel']||'?');
     if(!barByChan[key])barByChan[key]={barSum:0,adrSum:0,nights:0};
     const nights=n(r['Room Nights'])||1;
-    barByChan[key].barSum+=bar*nights;
+    barByChan[key].barSum+=ag.bar*nights;
     barByChan[key].adrSum+=adr*nights;
     barByChan[key].nights+=nights;
   });
@@ -4135,18 +4169,16 @@ function renderResChanOverview(){
   sorted.forEach(r=>{
     const res=n(r['Reservations'])||0;
     const rev=n(r['Room Revenue'])||0;
-    const revNights=n(r['Revenue Room Nights'])||0;
     const adr=n(r['ADR']);
     const lead=n(r['Avg Lead Time']);
     const cp=n(r['Cancel %']); const nsp=n(r['No Show %']);
     const share=totalRev>0?rev/totalRev*100:0;
     const mktBadge=r['Market Type']?`<span class="chip chip-gray" style="font-size:10px">${r['Market Type']}</span>`:'';
-    // BAR comparison
     const bc=barByChan[r['Source Code']]||barByChan[r['Channel']];
     const avgBar=bc&&bc.nights>0?bc.barSum/bc.nights:null;
     const avgAdr=bc&&bc.nights>0?bc.adrSum/bc.nights:null;
     const gap=(avgBar!=null&&avgAdr!=null&&avgBar>0)?(avgBar-avgAdr)/avgBar*100:null;
-    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=15?'var(--amber)':'var(--text)';
     tbl+=`<tr>
       <td style="padding:9px 14px;font-weight:600">${r['Channel']}<div style="font-size:10px;color:var(--text3)">${r['Source Code']||''}</div></td>
       <td>${mktBadge}</td>
@@ -4155,14 +4187,14 @@ function renderResChanOverview(){
       <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:var(--chart-blue);height:100%"></div></div><span style="font-size:11px">${Math.round(share)}%</span></div></td>
       <td>${adr!=null?fmt(adr):'—'}</td>
       <td style="color:var(--text2)">${avgBar!=null?fmt(avgBar):'—'}</td>
-      <td style="font-weight:600;color:${gapColor}">${gap!=null?(gap>=0?'':'+')+Math.round(Math.abs(gap))+'%':'—'}</td>
+      <td style="font-weight:600;color:${gapColor}">${gap!=null?Math.round(gap)+'%':'—'}</td>
       <td>${lead!=null?Math.round(lead)+'d':'—'}</td>
       <td style="color:${cp!=null&&cp>25?'var(--red)':cp!=null&&cp>15?'var(--amber)':'var(--text)'}">${cp!=null?Math.round(cp)+'%':'—'}</td>
       <td style="color:${nsp!=null&&nsp>5?'var(--red)':'var(--text)'}">${nsp!=null?Math.round(nsp)+'%':'—'}</td>
     </tr>`;
   });
   tbl+='</tbody></table>';
-  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Gap % = how far each channel\'s realized ADR sits below the BAR being sold for those stay dates — a proxy for OTA commission and rate erosion. Computed from posted reservations only.</div>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Gap % = how far each channel\'s realized ADR sits below the BAR for those stay dates — a proxy for OTA commission / rate erosion. OTAs are floored at 20%, direct channels at 10% (only where the raw figure falls below the floor, since stay-date BAR may have dropped after booking). Bookings with zero/negative gap are excluded from the average. Posted reservations only.</div>';
   document.getElementById('res-chan-tbl').innerHTML=tbl;
 }
 
@@ -4297,12 +4329,11 @@ function renderResDetail(){
     return true;
   });
 
-  // Precompute BAR + gap per row
+  // Precompute adjusted BAR + gap per row
   rows=rows.map(r=>{
     const adr=n(r['ADR per Night']);
-    const bar=barForDate(r['Arrival']);
-    const gap=(adr!=null&&adr>0&&bar!=null&&bar>0)?(bar-adr)/bar*100:null;
-    return {...r,_adr:adr,_bar:bar,_gap:gap,_rev:n(r['Room Revenue']),_lead:n(r['Lead Time Days'])};
+    const ag=adjustedGap(r);
+    return {...r,_adr:adr,_bar:ag.bar,_gap:ag.gap,_adjusted:ag.adjusted,_rev:n(r['Room Revenue']),_lead:n(r['Lead Time Days'])};
   });
 
   // Sort
@@ -4325,7 +4356,7 @@ function renderResDetail(){
   rows.forEach(r=>{
     const statusColor=r['Resv Status']==='CANCELLED'?'var(--red)':r['Resv Status']==='NO SHOW'?'var(--amber)':r['Resv Status']==='CHECKED OUT'?'var(--text3)':'var(--text)';
     const adr=r._adr, bar=r._bar, gap=r._gap, rev=r._rev;
-    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=15?'var(--amber)':gap<=0?'var(--text3)':'var(--text)';
     tbl+=`<tr>
       <td style="padding:9px 14px;font-family:monospace;font-size:11px">${r['Conf Number']||'—'}</td>
       <td>${r['Arrival']||'—'}</td>
@@ -4334,8 +4365,8 @@ function renderResDetail(){
       <td style="font-size:11px;color:var(--text2)">${r['Rate Code']||'—'}</td>
       <td style="color:${statusColor};font-size:11px;font-weight:600">${r['Resv Status']||'—'}</td>
       <td style="font-weight:600">${adr!=null&&adr>0?fmt(adr):'—'}</td>
-      <td style="color:var(--text2)">${bar!=null?fmt(bar):'—'}</td>
-      <td style="font-weight:600;color:${gapColor}">${gap!=null?(gap>=0?'':'+')+Math.round(Math.abs(gap))+'%':'—'}</td>
+      <td style="color:var(--text2)">${bar!=null?fmt(bar):'—'}${r._adjusted&&gap>0?'<span style="font-size:9px;color:var(--text3)" title="adjusted to channel floor"> *</span>':''}</td>
+      <td style="font-weight:600;color:${gapColor}">${gap!=null?Math.round(gap)+'%':'—'}</td>
       <td>${rev!=null&&rev>0?fmt(rev):'—'}</td>
       <td style="font-size:11px;color:var(--text2)">${r['Lead Time Days']||'—'}d</td>
       <td style="font-size:11px;color:var(--text3)">${r['Locality']||'—'}</td>
@@ -4360,7 +4391,7 @@ function renderResFuture(){
   const chMap={};
   rows.forEach(r=>{
     const key=r['Source Code']||r['Channel']||'?';
-    if(!chMap[key])chMap[key]={channel:r['Channel']||key,source:r['Source Code']||'',market:r['Market Code']||'',res:0,nights:0,rev:0,leadSum:0,leadCnt:0,barSum:0,barNights:0,adrSum:0};
+    if(!chMap[key])chMap[key]={channel:r['Channel']||key,source:r['Source Code']||'',market:r['Market Code']||'',res:0,nights:0,rev:0,leadSum:0,leadCnt:0,barSum:0,barNights:0,adrSum:0,adrMatchSum:0};
     const c=chMap[key];
     c.res++;
     const nights=n(r['Room Nights'])||0;
@@ -4369,9 +4400,9 @@ function renderResFuture(){
     const lead=n(r['Lead Time Days']); if(lead!=null){c.leadSum+=lead;c.leadCnt++;}
     // contracted ADR per night (may be 0 for unposted future)
     const adr=n(r['ADR per Night']);
-    const bar=barForDate(r['Arrival']);
     if(adr!=null&&adr>0&&nights>0){c.adrSum+=adr*nights;}
-    if(bar!=null&&bar>0&&nights>0&&adr!=null&&adr>0){c.barSum+=bar*nights;c.barNights+=nights;}
+    const ag=adjustedGap(r);
+    if(ag.gap!=null&&ag.gap>0&&adr!=null&&adr>0&&nights>0){c.barSum+=ag.bar*nights;c.barNights+=nights;c.adrMatchSum+=adr*nights;}
   });
   const chans=Object.values(chMap).sort((a,b)=>b.rev-a.rev||b.res-a.res);
   const totRes=chans.reduce((s,c)=>s+c.res,0);
@@ -4405,9 +4436,9 @@ function renderResFuture(){
     const share=totRev>0?c.rev/totRev*100:0;
     const adr=c.nights>0&&c.adrSum>0?c.adrSum/c.nights:null;
     const avgBar=c.barNights>0?c.barSum/c.barNights:null;
-    const avgAdrMatched=c.barNights>0?c.adrSum/c.barNights:null;
+    const avgAdrMatched=c.barNights>0?c.adrMatchSum/c.barNights:null;
     const gap=(avgBar!=null&&avgAdrMatched!=null&&avgBar>0)?(avgBar-avgAdrMatched)/avgBar*100:null;
-    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=12?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
+    const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=15?'var(--amber)':'var(--text)';
     const lead=c.leadCnt>0?c.leadSum/c.leadCnt:null;
     tbl+=`<tr>
       <td style="padding:9px 14px;font-weight:600">${c.channel}<div style="font-size:10px;color:var(--text3)">${c.source}</div></td>
@@ -4422,7 +4453,7 @@ function renderResFuture(){
     </tr>`;
   });
   tbl+='</tbody></table>';
-  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Future bookings often have $0 posted ADR until the folio settles — those show "unposted" and are excluded from the gap calculation.</div>';
+  tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Future bookings often have $0 posted ADR until the folio settles — those show "unposted" and are excluded from the gap. Gap applies the same channel floor rules as Channel Overview (OTA 20%, direct 10%), excluding zero/negative-gap bookings.</div>';
   document.getElementById('res-future-tbl').innerHTML=tbl;
 }
 
