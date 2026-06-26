@@ -560,8 +560,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="respanel-detail" style="display:none">
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:.9rem 1.25rem .5rem;border-bottom:.5px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <input id="res-search" type="text" placeholder="Search channel, source, market…" oninput="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;flex:1;min-width:160px">
-        <select id="res-status-filter" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <input id="res-search" type="text" placeholder="Search channel, source, market…" oninput="resFilter()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none;flex:1;min-width:160px">
+        <select id="res-status-filter" onchange="resFilter()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
           <option value="all">All statuses</option>
           <option value="RESERVED">Reserved</option>
           <option value="DUE IN">Due In</option>
@@ -570,7 +570,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           <option value="CANCELLED">Cancelled</option>
           <option value="NO SHOW">No Show</option>
         </select>
-        <select id="res-market-filter" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <select id="res-market-filter" onchange="resFilter()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
           <option value="all">All markets</option>
           <option value="INT">Internet / OTA</option>
           <option value="OPA">Opaque</option>
@@ -578,7 +578,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           <option value="COR">Corporate</option>
           <option value="GRP">Group</option>
         </select>
-        <select id="res-month-filter" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <select id="res-month-filter" onchange="resFilter()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
           <option value="all">All months</option>
           <option value="2026-01">January</option><option value="2026-02">February</option>
           <option value="2026-03">March</option><option value="2026-04">April</option>
@@ -587,7 +587,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
           <option value="2026-09">September</option><option value="2026-10">October</option>
           <option value="2026-11">November</option><option value="2026-12">December</option>
         </select>
-        <select id="res-sort" onchange="renderResDetail()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
+        <select id="res-sort" onchange="resFilter()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
           <option value="arrival">Sort: Arrival ↑</option>
           <option value="arrival-desc">Arrival ↓</option>
           <option value="adr-desc">ADR (high→low)</option>
@@ -4020,6 +4020,7 @@ function renderOwnerReport(){
 // ── RESERVATIONS — per-reservation channel intelligence ──────────────────────
 // Sources: Reservation Raw (one row per res), Channel Performance (aggregated)
 let resCurrentTab='channels';
+let resShowAll=false; // full detail row cap toggle
 
 function resTab(tab,btn){
   resCurrentTab=tab;
@@ -4327,6 +4328,9 @@ function renderResLocality(){
   document.getElementById('res-local-tbl').innerHTML=tbl;
 }
 
+// Filter change resets the row cap back to 500 (so a heavy new filter doesn't lag)
+function resFilter(){ resShowAll=false; renderResDetail(); }
+
 function renderResDetail(){
   const el=document.getElementById('res-detail-tbl');
   const search=(document.getElementById('res-search')?.value||'').toLowerCase();
@@ -4370,8 +4374,12 @@ function renderResDetail(){
   const countEl=document.getElementById('res-detail-count');
   if(countEl)countEl.textContent=rows.length.toLocaleString()+' reservations';
 
+  const CAP=500;
+  const showAll=resShowAll||rows.length<=CAP;
+  const showRows=showAll?rows:rows.slice(0,CAP);
+
   let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Conf#</th><th>Booking</th><th>Arrival</th><th>Nights</th><th>Channel</th><th>Rate Code</th><th>Status</th><th>ADR</th><th>BAR</th><th>Gap %</th><th>Revenue</th><th>Lead</th><th>Origin</th></tr></thead><tbody>';
-  rows.forEach(r=>{
+  showRows.forEach(r=>{
     const statusColor=r['Resv Status']==='CANCELLED'?'var(--red)':r['Resv Status']==='NO SHOW'?'var(--amber)':r['Resv Status']==='CHECKED OUT'?'var(--text3)':'var(--text)';
     const adr=r._adr, bar=r._bar, gap=r._gap, rev=r._rev;
     const gapColor=gap==null?'var(--text3)':gap>=25?'var(--red)':gap>=15?'var(--amber)':gap<0?'var(--chart-green)':'var(--text)';
@@ -4392,6 +4400,16 @@ function renderResDetail(){
     </tr>`;
   });
   tbl+='</tbody></table>';
+  if(!showAll){
+    tbl+=`<div style="text-align:center;padding:14px;border-top:.5px solid var(--border)">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Showing first ${CAP} of ${rows.length.toLocaleString()} reservations (capped for speed)</div>
+      <button class="ftab" onclick="resShowAll=true;renderResDetail()" style="padding:7px 16px"><i class="ti ti-list" style="font-size:12px"></i> Show all ${rows.length.toLocaleString()} rows</button>
+    </div>`;
+  } else if(rows.length>CAP){
+    tbl+=`<div style="text-align:center;padding:12px;border-top:.5px solid var(--border)">
+      <button class="ftab" onclick="resShowAll=false;renderResDetail()" style="padding:6px 14px"><i class="ti ti-arrows-minimize" style="font-size:12px"></i> Collapse to first ${CAP}</button>
+    </div>`;
+  }
   el.innerHTML=tbl;
 }
 
