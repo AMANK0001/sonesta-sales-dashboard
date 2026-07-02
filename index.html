@@ -3408,17 +3408,40 @@ const PACE_DEMO=(()=>{
 // Rows for one stay date, earliest snapshot first (DBA descending)
 // Duetto Raw lookup by stay date. Index-based per schema:
 // 0=Date, 43=Total Rooms Commit (OTB), 25=1-day pace(Z), 26=3-day pace(AA), 27=7-day pace(AB)
+// Duetto Raw column indices (0-based). Adjust here if the Duetto export layout shifts.
+// Per schema: 0=Date, 43=Total Rooms Commit (OTB). Pace: 25=1day(Z), 26=3day(AA), 27=7day(AB).
+const DU_COL={date:0, otb:43, pace1:25, pace3:26, pace7:27};
+function duNormDate(v){
+  if(v==null)return '';
+  let s=String(v).trim();
+  // already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // M/D/YYYY or MM/DD/YYYY (with optional time)
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m){const mo=m[1].padStart(2,'0'),d=m[2].padStart(2,'0');return `${m[3]}-${mo}-${d}`;}
+  // Excel serial number
+  if(/^\d+(\.\d+)?$/.test(s)){
+    const serial=parseFloat(s);
+    if(serial>40000&&serial<60000){
+      const dt=new Date(Date.UTC(1899,11,30)+serial*86400000);
+      return dt.toISOString().slice(0,10);
+    }
+  }
+  // fallback: try Date parse
+  const dt=new Date(s);
+  if(!isNaN(dt))return dt.toISOString().slice(0,10);
+  return s;
+}
 function duettoFor(dateStr){
   if(!allDu||!allDu.length||!dateStr)return null;
-  // skip header row(s): find row whose col 0 matches the date
   for(let i=0;i<allDu.length;i++){
     const row=allDu[i];
-    if(row&&String(row[0]).trim()===dateStr){
+    if(row&&duNormDate(row[DU_COL.date])===dateStr){
       return {
-        otb:n(row[43]),
-        pace1:n(row[25]),
-        pace3:n(row[26]),
-        pace7:n(row[27]),
+        otb:n(row[DU_COL.otb]),
+        pace1:n(row[DU_COL.pace1]),
+        pace3:n(row[DU_COL.pace3]),
+        pace7:n(row[DU_COL.pace7]),
       };
     }
   }
@@ -3551,14 +3574,13 @@ function renderPaceKPIs(){
   const rows=paceRowsFor(paceSelDate);
   if(!rows.length){el.innerHTML='';return;}
   const latest=rows[rows.length-1];
-  const idx30=rows.length-1-30;
-  const p30=idx30>=0?latest.otb-rows[idx30].otb:null;
   const marks=paceRateMarks(rows);
 
   // Duetto Raw for today — more accurate OTB and pace
   const du=!paceDemoMode?duettoFor(paceSelDate):null;
   const currentOtb=du&&du.otb!=null?du.otb:latest.otb;
   const pace1=du?du.pace1:null;
+  const pace3=du?du.pace3:null;
 
   // Event for this stay date
   const ev=!paceDemoMode?allEv.find(e=>e['Date']===paceSelDate):null;
@@ -3591,7 +3613,7 @@ function renderPaceKPIs(){
     <div class="mc"><div class="mc-label">Current OTB</div><div class="mc-val">${currentOtb}</div><div class="mc-sub">rooms on the books${du&&du.otb!=null?' (Duetto)':''}</div></div>
     <div class="mc"><div class="mc-label">Current BAR</div><div class="mc-val">${latest.bar!=null?fmt(latest.bar):'—'}</div></div>
     <div class="mc"><div class="mc-label">1-day pickup</div><div class="mc-val" style="color:${pace1!=null&&pace1>0?'var(--green)':pace1!=null&&pace1<0?'var(--red)':'var(--text)'}">${pace1!=null?(pace1>=0?'+':'')+pace1:'—'}</div><div class="mc-sub">rooms added today (Duetto)</div></div>
-    <div class="mc"><div class="mc-label">30-day pickup</div><div class="mc-val">${p30!=null?(p30>=0?'+':'')+p30:'—'}</div><div class="mc-sub">${idx30<0?'log too young':'rooms in last 30 snapshots'}</div></div>
+    <div class="mc"><div class="mc-label">3-day pickup</div><div class="mc-val" style="color:${pace3!=null&&pace3>0?'var(--green)':pace3!=null&&pace3<0?'var(--red)':'var(--text)'}">${pace3!=null?(pace3>=0?'+':'')+pace3:'—'}</div><div class="mc-sub">rooms added last 3 days (Duetto)</div></div>
     <div class="mc"><div class="mc-label">Rate changes</div><div class="mc-val">${marks.length}</div><div class="mc-sub">${marks.filter(m=>m.up).length} up · ${marks.filter(m=>!m.up).length} down</div></div>`;
 }
 
