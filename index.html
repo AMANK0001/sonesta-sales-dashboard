@@ -3450,27 +3450,10 @@ function duettoFor(dateStr){
 
 function paceRowsFor(key){
   if(paceDemoMode) return PACE_DEMO[key]||[];
-  const rows=allPl.filter(r=>r['Stay Date']===key)
+  return allPl.filter(r=>r['Stay Date']===key)
     .map(r=>({dba:n(r['Days Before Arrival']),otb:n(r['OTB Rooms'])||0,bar:n(r['BAR']),snap:r['Snapshot Date']}))
     .filter(r=>r.dba!=null)
     .sort((a,b)=>b.dba-a.dba);
-  // For TODAY's point, override OTB with Duetto Raw (more accurate current committed rooms).
-  // BAR is left from the snapshot (the rate the user adjusts daily).
-  const today=getToday();
-  const du=duettoFor(key);
-  if(du&&du.otb!=null&&rows.length){
-    const last=rows[rows.length-1];
-    if(last.snap===today || last.dba===dayDiff(key,today)){
-      last.otb=du.otb;
-    } else {
-      // today's snapshot may not be logged yet — append a today point from Duetto
-      const dbaToday=dayDiff(key,today);
-      if(dbaToday!=null&&dbaToday>=0){
-        rows.push({dba:dbaToday,otb:du.otb,bar:last.bar,snap:today});
-      }
-    }
-  }
-  return rows;
 }
 
 function paceDates(){
