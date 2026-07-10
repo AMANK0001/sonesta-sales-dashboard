@@ -1022,7 +1022,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div class="metric-grid" id="rs-kpis"></div>
   <div class="two-col">
     <div class="card"><div class="card-title">Ancillary revenue by department — YTD</div><div class="chart-wrap-lg"><canvas id="rsDeptChart"></canvas></div></div>
-    <div class="card"><div class="card-title">Revenue mix — room vs everything else</div><div class="chart-wrap-lg"><canvas id="rsMixChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Ancillary composition</div><div class="chart-wrap-lg"><canvas id="rsMixChart"></canvas></div></div>
   </div>
   <div class="card"><div class="card-title">All departments — MTD &amp; YTD</div><div id="rs-tbl"></div></div>
 </div>
@@ -4004,8 +4004,7 @@ function renderOwnerReport(){
   }
   const heroEarnedForSplit = periodHasPast? pEarned : pAhead;
 
-  // ── Department revenue block (YTD) — room revenue from THIS dashboard (ytd.rev),
-  // everything else (ancillary) from Financial Summary. Appended at the end of the report.
+  // ── Ancillary revenue block (YTD) — non-room departments only, from Financial Summary.
   let deptBlock='';
   if(allFin.length){
     const isRoom=d=>/room revenue/i.test(d);
@@ -4013,27 +4012,27 @@ function renderOwnerReport(){
     const finV=(r)=>{const v=n(r['YTD Actual']); return v!=null?v:(n(r['YTD'])||0);};
     const ancSorted=[...ancRows].map(r=>({name:r['Department'],ytd:finV(r)})).filter(x=>x.ytd).sort((a,b)=>b.ytd-a.ytd);
     const ancTotal=ancSorted.reduce((s,x)=>s+x.ytd,0);
-    const roomRev=ytd.rev; // dashboard's own YTD room revenue
+    const roomRev=ytd.rev;
     const grandTotal=roomRev+ancTotal;
-    const bars=[{name:'Room revenue',ytd:roomRev,room:true},...ancSorted];
-    const maxV=Math.max(...bars.map(b=>b.ytd),1);
-    const rowsHtml=bars.map(b=>{
+    const ancPct=grandTotal>0?ancTotal/grandTotal*100:0;
+    const maxV=Math.max(...ancSorted.map(b=>b.ytd),1);
+    const rowsHtml=ancSorted.map(b=>{
       const w=Math.max(b.ytd/maxV*100,2);
-      const share=grandTotal>0?b.ytd/grandTotal*100:0;
+      const share=ancTotal>0?b.ytd/ancTotal*100:0;
       return `<div class="or-mb-row">
         <div style="font-weight:600">${b.name}</div>
-        <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:${b.room?'#2563eb':'#639922'}">${b.ytd>maxV*0.16?fmt(b.ytd):''}</div></div>
+        <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:#639922">${b.ytd>maxV*0.16?fmt(b.ytd):''}</div></div>
         <div style="text-align:right;font-weight:600">${b.ytd<=maxV*0.16?fmt(b.ytd):''}<span style="color:var(--text3);font-weight:400;font-size:11px"> ${Math.round(share)}%</span></div>
       </div>`;
     }).join('');
     deptBlock=`
-      <div class="or-section-label" style="margin-top:28px">Revenue by department — year to date</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Room revenue is the hotel's room sales; everything below it is ancillary income (F&amp;B, fees, add-ons).</div>
+      <div class="or-section-label" style="margin-top:28px">Ancillary revenue by department — year to date</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Income beyond room sales — F&amp;B, fees, and add-ons. Percentages are each stream's share of total ancillary.</div>
       <div class="or-monthbars">${rowsHtml}</div>
       <div class="or-fullyear" style="margin-top:18px">
-        <div class="or-card-label" style="color:var(--chart-green)">Total revenue — all departments YTD</div>
-        <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(grandTotal)}</div>
-        <div style="font-size:13px;color:var(--text2)">${fmt(roomRev)} rooms + ${fmt(ancTotal)} ancillary</div>
+        <div class="or-card-label" style="color:var(--chart-green)">Total ancillary revenue YTD</div>
+        <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ancTotal)}</div>
+        <div style="font-size:13px;color:var(--text2)">${Math.round(ancPct)}% of total revenue (room + ancillary)</div>
       </div>`;
   }
 
@@ -4649,8 +4648,7 @@ function renderRevStreams(){
     <div class="mc"><div class="mc-label">Ancillary revenue YTD</div><div class="mc-val">${fmtK(ancYTD)}</div><div class="mc-sub">everything except room revenue</div></div>
     <div class="mc"><div class="mc-label">Ancillary MTD</div><div class="mc-val">${fmtK(ancMTD)}</div><div class="mc-sub">this month so far</div></div>
     <div class="mc"><div class="mc-label">Ancillary share</div><div class="mc-val">${Math.round(ancPct)}%</div><div class="mc-sub">of total revenue YTD</div></div>
-    <div class="mc"><div class="mc-label">Top ancillary stream</div><div class="mc-val" style="font-size:14px">${topAnc?topAnc['Department']:'—'}</div><div class="mc-sub">${topAnc?fmtK(finVal(topAnc,'ytd')||0)+' YTD':''}</div></div>
-    <div class="mc"><div class="mc-label">Total revenue YTD</div><div class="mc-val">${fmtK(totYTD)}</div><div class="mc-sub">room + ancillary</div></div>`;
+    <div class="mc"><div class="mc-label">Top ancillary stream</div><div class="mc-val" style="font-size:14px">${topAnc?topAnc['Department']:'—'}</div><div class="mc-sub">${topAnc?fmtK(finVal(topAnc,'ytd')||0)+' YTD':''}</div></div>`;
 
   // Ancillary bar chart
   const COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A','#888780','#A32D2D','#2563eb','#9CC265','#EF9F27'];
@@ -4664,34 +4662,32 @@ function renderRevStreams(){
       scales:{x:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
   });
 
-  // Room vs ancillary doughnut
+  // Ancillary composition doughnut (ancillary departments only, no room revenue)
   if(charts.rsMix)charts.rsMix.destroy();
   charts.rsMix=new Chart(document.getElementById('rsMixChart'),{
     type:'doughnut',
-    data:{labels:['Room revenue','Ancillary'],datasets:[{data:[roomYTD,ancYTD],backgroundColor:['#378ADD','#639922'],borderWidth:0,hoverOffset:6}]},
+    data:{labels:chartRows.map(r=>r['Department']),datasets:[{data:chartRows.map(r=>finVal(r,'ytd')||0),backgroundColor:COLORS,borderWidth:0,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      plugins:{legend:{position:'bottom',labels:{font:{size:12},color:'#888780'}},
-        tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(totYTD>0?Math.round(c.parsed/totYTD*100):0)+'%)'}}}}
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#888780',boxWidth:12}},
+        tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(ancYTD>0?Math.round(c.parsed/ancYTD*100):0)+'%)'}}}}
   });
 
-  // Table — all departments incl room, with TOTAL
-  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Department</th><th>MTD</th><th>YTD</th><th>Share of YTD</th></tr></thead><tbody>';
-  const ordered=[...(roomRow?[roomRow]:[]),...ancSorted];
-  ordered.forEach(r=>{
+  // Table — ancillary departments only, with ancillary TOTAL
+  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Department</th><th>MTD</th><th>YTD</th><th>Share of ancillary</th></tr></thead><tbody>';
+  ancSorted.forEach(r=>{
     const mtd=finVal(r,'mtd')||0, ytd=finVal(r,'ytd')||0;
-    const share=totYTD>0?ytd/totYTD*100:0;
-    const isR=isRoom(r['Department']);
-    tbl+=`<tr${isR?' style="background:var(--bg2)"':''}>
-      <td style="padding:9px 14px;font-weight:${isR?'700':'600'}">${r['Department']}${isR?' <span class="chip chip-blue" style="font-size:10px">room</span>':''}</td>
+    const share=ancYTD>0?ytd/ancYTD*100:0;
+    tbl+=`<tr>
+      <td style="padding:9px 14px;font-weight:600">${r['Department']}</td>
       <td>${mtd!==0?fmt(mtd):'—'}</td>
       <td style="font-weight:600">${ytd!==0?fmt(ytd):'—'}</td>
-      <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:${isR?'var(--chart-blue)':'var(--chart-green)'};height:100%"></div></div><span style="font-size:11px">${share<1&&share>0?'<1':Math.round(share)}%</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:var(--chart-green);height:100%"></div></div><span style="font-size:11px">${share<1&&share>0?'<1':Math.round(share)}%</span></div></td>
     </tr>`;
   });
   tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
-    <td style="padding:9px 14px;font-weight:700">TOTAL</td>
-    <td style="font-weight:700">${fmt(totMTD)}</td>
-    <td style="font-weight:700">${fmt(totYTD)}</td>
+    <td style="padding:9px 14px;font-weight:700">TOTAL ANCILLARY</td>
+    <td style="font-weight:700">${fmt(ancMTD)}</td>
+    <td style="font-weight:700">${fmt(ancYTD)}</td>
     <td></td></tr>`;
   tbl+='</tbody></table>';
   document.getElementById('rs-tbl').innerHTML=tbl;
