@@ -242,6 +242,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <button class="nav-tab" onclick="showPage('grp-roomtype',this)"><i class="ti ti-bed"></i> Group Rooms</button>
   <button class="nav-tab" onclick="showPage('roomtype-dive',this)"><i class="ti ti-layout-grid"></i> Room Mix</button>
   <button class="nav-tab" onclick="showPage('actions',this)"><i class="ti ti-checklist"></i> Actions</button>
+  <button class="nav-tab" onclick="showPage('revstreams',this)"><i class="ti ti-coins"></i> Revenue Streams</button>
   <button class="nav-tab" onclick="showPage('owner',this)"><i class="ti ti-file-dollar"></i> Report</button>
 </nav>
 
@@ -1016,6 +1017,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   <div id="action-list" class="insight-row"><div class="loading">Building action list...</div></div>
 </div>
 
+<!-- REVENUE STREAMS — non-room / ancillary revenue by department -->
+<div class="page" id="page-revstreams">
+  <div class="metric-grid" id="rs-kpis"></div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">Ancillary revenue by department — YTD</div><div class="chart-wrap-lg"><canvas id="rsDeptChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Revenue mix — room vs everything else</div><div class="chart-wrap-lg"><canvas id="rsMixChart"></canvas></div></div>
+  </div>
+  <div class="card"><div class="card-title">All departments — MTD &amp; YTD</div><div id="rs-tbl"></div></div>
+</div>
+
 <!-- OWNER REPORT -->
 <div class="page" id="page-owner">
   <div class="card" id="owner-controls" style="margin-bottom:1.25rem">
@@ -1065,7 +1076,7 @@ const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07'
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
 
 const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[], allPl=[], allCp=[], allCpCh=[], allDu=[];
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[], allPl=[], allCp=[], allCpCh=[], allDu=[], allFin=[];
 let pipeCurrentMode='risk';
 
 // Calendar state
@@ -1087,6 +1098,7 @@ function showPage(id,btn){
   if(id==='reservations') renderReservations();
   if(id==='pace') renderPace();
   if(id==='owner') renderOwnerReport();
+  if(id==='revstreams') renderRevStreams();
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
@@ -1164,6 +1176,8 @@ async function loadAll(){
     try{ allCpCh=toRows(await fetchTab(HUB,'Channel Performance')); }catch(e){ allCpCh=[]; console.warn('Channel Performance not available:',e.message); }
     // Duetto Raw — index-based (no clean headers). Kept as raw rows for pace OTB + pickup cols Z/AA/AB.
     try{ allDu=await fetchTab(HUB,'Duetto Raw'); }catch(e){ allDu=[]; console.warn('Duetto Raw not available:',e.message); }
+    // Financial Summary — department revenue (room + ancillary), MTD/YTD
+    try{ allFin=toRows(await fetchTab(HUB,'Financial Summary')); }catch(e){ allFin=[]; console.warn('Financial Summary not available:',e.message); }
 
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
@@ -3450,10 +3464,20 @@ function duettoFor(dateStr){
 
 function paceRowsFor(key){
   if(paceDemoMode) return PACE_DEMO[key]||[];
-  return allPl.filter(r=>r['Stay Date']===key)
+  const rows=allPl.filter(r=>r['Stay Date']===key)
     .map(r=>({dba:n(r['Days Before Arrival']),otb:n(r['OTB Rooms'])||0,bar:n(r['BAR']),snap:r['Snapshot Date']}))
     .filter(r=>r.dba!=null)
     .sort((a,b)=>b.dba-a.dba);
+  // Reconcile the final curve point with the true current OTB (same source as the OTB card:
+  // Daily Forecast / Daily Revenue Total Rooms). The morning snapshot misses bookings that
+  // came in later that day, so the curve tail lagged the card. Bump the last point to match.
+  if(rows.length){
+    const fc=allFc.find(r=>r['Date']===key);
+    const rv=allRv.find(r=>r['Date']===key);
+    const trueOtb=fc?n(fc['Total Rooms']):(rv?n(rv['Total Rooms']):null);
+    if(trueOtb!=null&&trueOtb>=0) rows[rows.length-1].otb=trueOtb;
+  }
+  return rows;
 }
 
 function paceDates(){
@@ -3562,14 +3586,8 @@ function renderPaceKPIs(){
   const p3=idx3>=0?latest.otb-rows[idx3].otb:null;
   const marks=paceRateMarks(rows);
 
-  // Current OTB — same source as Rev calendar room count (Daily Forecast / Daily Revenue Total Rooms)
-  let currentOtb=latest.otb;
-  if(!paceDemoMode){
-    const fc=allFc.find(r=>r['Date']===paceSelDate);
-    const rv=allRv.find(r=>r['Date']===paceSelDate);
-    const dfOtb=fc?n(fc['Total Rooms']):(rv?n(rv['Total Rooms']):null);
-    if(dfOtb!=null)currentOtb=dfOtb;
-  }
+  // Current OTB — reconciled in paceRowsFor to match Daily Forecast/Revenue room count
+  const currentOtb=latest.otb;
 
   // Event for this stay date
   const ev=!paceDemoMode?allEv.find(e=>e['Date']===paceSelDate):null;
@@ -3986,6 +4004,39 @@ function renderOwnerReport(){
   }
   const heroEarnedForSplit = periodHasPast? pEarned : pAhead;
 
+  // ── Department revenue block (YTD) — room revenue from THIS dashboard (ytd.rev),
+  // everything else (ancillary) from Financial Summary. Appended at the end of the report.
+  let deptBlock='';
+  if(allFin.length){
+    const isRoom=d=>/room revenue/i.test(d);
+    const ancRows=allFin.filter(r=>{const d=(r['Department']||'').trim();return d&&d.toUpperCase()!=='TOTAL'&&!isRoom(d);});
+    const finV=(r)=>{const v=n(r['YTD Actual']); return v!=null?v:(n(r['YTD'])||0);};
+    const ancSorted=[...ancRows].map(r=>({name:r['Department'],ytd:finV(r)})).filter(x=>x.ytd).sort((a,b)=>b.ytd-a.ytd);
+    const ancTotal=ancSorted.reduce((s,x)=>s+x.ytd,0);
+    const roomRev=ytd.rev; // dashboard's own YTD room revenue
+    const grandTotal=roomRev+ancTotal;
+    const bars=[{name:'Room revenue',ytd:roomRev,room:true},...ancSorted];
+    const maxV=Math.max(...bars.map(b=>b.ytd),1);
+    const rowsHtml=bars.map(b=>{
+      const w=Math.max(b.ytd/maxV*100,2);
+      const share=grandTotal>0?b.ytd/grandTotal*100:0;
+      return `<div class="or-mb-row">
+        <div style="font-weight:600">${b.name}</div>
+        <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:${b.room?'#2563eb':'#639922'}">${b.ytd>maxV*0.16?fmt(b.ytd):''}</div></div>
+        <div style="text-align:right;font-weight:600">${b.ytd<=maxV*0.16?fmt(b.ytd):''}<span style="color:var(--text3);font-weight:400;font-size:11px"> ${Math.round(share)}%</span></div>
+      </div>`;
+    }).join('');
+    deptBlock=`
+      <div class="or-section-label" style="margin-top:28px">Revenue by department — year to date</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Room revenue is the hotel's room sales; everything below it is ancillary income (F&amp;B, fees, add-ons).</div>
+      <div class="or-monthbars">${rowsHtml}</div>
+      <div class="or-fullyear" style="margin-top:18px">
+        <div class="or-card-label" style="color:var(--chart-green)">Total revenue — all departments YTD</div>
+        <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(grandTotal)}</div>
+        <div style="font-size:13px;color:var(--text2)">${fmt(roomRev)} rooms + ${fmt(ancTotal)} ancillary</div>
+      </div>`;
+  }
+
   el.innerHTML=`
     <div class="or-head">
       <div>
@@ -4063,10 +4114,13 @@ function renderOwnerReport(){
       <span><span style="display:inline-block;width:10px;height:10px;background:#9CC265;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Booked ahead</span>
     </div>
 
+    ${deptBlock}
+
     <div class="or-foot">
-      All figures are room revenue. "On the books" means rooms already reserved for future dates.
+      All room-revenue figures are from this dashboard's live booking data; department revenue is from the Financial Summary (net of adjustments).
+      "On the books" means rooms already reserved for future dates.
       Transient = individual guests · Group = blocks, weddings, teams, and events.
-      Revenue by guest type is estimated from the room mix. Report reflects live booking data as of generation.
+      Revenue by guest type is estimated from the room mix.
     </div>
   `;
   // sync active button if entered via tab nav
@@ -4551,6 +4605,96 @@ function renderResFuture(){
   tbl+='</tbody></table>';
   tbl+='<div style="font-size:11px;color:var(--text3);padding:8px 14px">Avg BAR uses all future posted rows. Gap % is from bookings made within 3 days of arrival with a positive gap. Unposted $0-ADR bookings are excluded from ADR and gap.</div>';
   document.getElementById('res-future-tbl').innerHTML=tbl;
+}
+
+// ── REVENUE STREAMS — ancillary / non-room revenue by department ──────────────
+function finRows(){
+  // Financial Summary: Department | MTD Actual | YTD Actual (+ TOTAL row)
+  return allFin.filter(r=>{
+    const d=(r['Department']||'').trim();
+    return d && d.toUpperCase()!=='TOTAL';
+  });
+}
+function finVal(r,which){
+  // tolerate header naming variations
+  const keys=which==='mtd'?['MTD Actual','MTD']:['YTD Actual','YTD'];
+  for(const k of keys){ if(r[k]!=null&&r[k]!==''){const v=n(r[k]); if(v!=null)return v;} }
+  return null;
+}
+
+function renderRevStreams(){
+  const kpiEl=document.getElementById('rs-kpis');
+  if(!allFin.length){
+    kpiEl.innerHTML='<div class="empty" style="grid-column:1/-1">Financial Summary tab not found in Data Hub. It refreshes daily ~11:45am.</div>';
+    document.getElementById('rs-tbl').innerHTML='';
+    return;
+  }
+  const rows=finRows();
+  const isRoom=d=>/room revenue/i.test(d);
+  const roomRow=rows.find(r=>isRoom(r['Department']));
+  const ancRows=rows.filter(r=>!isRoom(r['Department']));
+
+  const roomYTD=roomRow?finVal(roomRow,'ytd')||0:0;
+  const roomMTD=roomRow?finVal(roomRow,'mtd')||0:0;
+  const ancYTD=ancRows.reduce((s,r)=>s+(finVal(r,'ytd')||0),0);
+  const ancMTD=ancRows.reduce((s,r)=>s+(finVal(r,'mtd')||0),0);
+  const totYTD=roomYTD+ancYTD, totMTD=roomMTD+ancMTD;
+  const ancPct=totYTD>0?ancYTD/totYTD*100:0;
+
+  // top ancillary dept
+  const ancSorted=[...ancRows].sort((a,b)=>(finVal(b,'ytd')||0)-(finVal(a,'ytd')||0));
+  const topAnc=ancSorted[0];
+
+  kpiEl.innerHTML=`
+    <div class="mc"><div class="mc-label">Ancillary revenue YTD</div><div class="mc-val">${fmtK(ancYTD)}</div><div class="mc-sub">everything except room revenue</div></div>
+    <div class="mc"><div class="mc-label">Ancillary MTD</div><div class="mc-val">${fmtK(ancMTD)}</div><div class="mc-sub">this month so far</div></div>
+    <div class="mc"><div class="mc-label">Ancillary share</div><div class="mc-val">${Math.round(ancPct)}%</div><div class="mc-sub">of total revenue YTD</div></div>
+    <div class="mc"><div class="mc-label">Top ancillary stream</div><div class="mc-val" style="font-size:14px">${topAnc?topAnc['Department']:'—'}</div><div class="mc-sub">${topAnc?fmtK(finVal(topAnc,'ytd')||0)+' YTD':''}</div></div>
+    <div class="mc"><div class="mc-label">Total revenue YTD</div><div class="mc-val">${fmtK(totYTD)}</div><div class="mc-sub">room + ancillary</div></div>`;
+
+  // Ancillary bar chart
+  const COLORS=['#378ADD','#639922','#EF9F27','#8B5CF6','#1D9E75','#E24B4A','#888780','#A32D2D','#2563eb','#9CC265','#EF9F27'];
+  const chartRows=ancSorted.filter(r=>(finVal(r,'ytd')||0)!==0);
+  if(charts.rsDept)charts.rsDept.destroy();
+  charts.rsDept=new Chart(document.getElementById('rsDeptChart'),{
+    type:'bar',
+    data:{labels:chartRows.map(r=>r['Department']),datasets:[{label:'YTD',data:chartRows.map(r=>finVal(r,'ytd')||0),backgroundColor:COLORS,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)}}},
+      scales:{x:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}},y:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}}}}
+  });
+
+  // Room vs ancillary doughnut
+  if(charts.rsMix)charts.rsMix.destroy();
+  charts.rsMix=new Chart(document.getElementById('rsMixChart'),{
+    type:'doughnut',
+    data:{labels:['Room revenue','Ancillary'],datasets:[{data:[roomYTD,ancYTD],backgroundColor:['#378ADD','#639922'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'bottom',labels:{font:{size:12},color:'#888780'}},
+        tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(totYTD>0?Math.round(c.parsed/totYTD*100):0)+'%)'}}}}
+  });
+
+  // Table — all departments incl room, with TOTAL
+  let tbl='<table class="tbl"><thead><tr><th style="padding:8px 14px">Department</th><th>MTD</th><th>YTD</th><th>Share of YTD</th></tr></thead><tbody>';
+  const ordered=[...(roomRow?[roomRow]:[]),...ancSorted];
+  ordered.forEach(r=>{
+    const mtd=finVal(r,'mtd')||0, ytd=finVal(r,'ytd')||0;
+    const share=totYTD>0?ytd/totYTD*100:0;
+    const isR=isRoom(r['Department']);
+    tbl+=`<tr${isR?' style="background:var(--bg2)"':''}>
+      <td style="padding:9px 14px;font-weight:${isR?'700':'600'}">${r['Department']}${isR?' <span class="chip chip-blue" style="font-size:10px">room</span>':''}</td>
+      <td>${mtd!==0?fmt(mtd):'—'}</td>
+      <td style="font-weight:600">${ytd!==0?fmt(ytd):'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div style="width:${Math.min(share,100)}%;background:${isR?'var(--chart-blue)':'var(--chart-green)'};height:100%"></div></div><span style="font-size:11px">${share<1&&share>0?'<1':Math.round(share)}%</span></div></td>
+    </tr>`;
+  });
+  tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
+    <td style="padding:9px 14px;font-weight:700">TOTAL</td>
+    <td style="font-weight:700">${fmt(totMTD)}</td>
+    <td style="font-weight:700">${fmt(totYTD)}</td>
+    <td></td></tr>`;
+  tbl+='</tbody></table>';
+  document.getElementById('rs-tbl').innerHTML=tbl;
 }
 
 loadAll();
