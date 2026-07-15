@@ -89,6 +89,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   .or-card,.or-fullyear{break-inside:avoid}
 }
 @media(max-width:760px){.or-hero-grid{grid-template-columns:repeat(2,1fr)}.or-cards{grid-template-columns:1fr}.or-mb-row{grid-template-columns:70px 1fr 90px}}
+.or-editable{cursor:text;border-radius:4px;transition:background .12s,box-shadow .12s;outline:none}
+.or-editable:hover{background:rgba(127,127,127,.12);box-shadow:0 0 0 1px rgba(127,127,127,.25)}
+.or-editable:focus{background:rgba(127,127,127,.16);box-shadow:0 0 0 2px var(--chart-blue)}
+@media print{.or-editable:hover,.or-editable:focus{background:none!important;box-shadow:none!important}}
 .nav-tab{padding:.7rem 1.1rem;font-size:13px;font-weight:500;color:var(--text2);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:color .15s}
 .nav-tab:hover{color:var(--text)}
 .nav-tab.active{color:var(--text);border-bottom-color:var(--text)}
@@ -1030,19 +1034,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 <!-- OWNER REPORT -->
 <div class="page" id="page-owner">
   <div class="card" id="owner-controls" style="margin-bottom:1.25rem">
-    <div class="card-title">Report period</div>
+    <div class="card-title">Report month</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <button class="ftab active" id="opb-current" onclick="ownerPeriod('current',this)">Current payroll period</button>
-      <button class="ftab" id="opb-last" onclick="ownerPeriod('last',this)">Last payroll period</button>
-      <button class="ftab" id="opb-month" onclick="ownerPeriod('month',this)">This calendar month</button>
-      <button class="ftab" id="opb-custom" onclick="ownerPeriod('custom',this)">Custom dates</button>
-    </div>
-    <div id="owner-custom-row" style="display:none;gap:10px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:12px;color:var(--text2)">From</span>
-      <input type="date" id="owner-from" min="2026-01-01" max="2026-12-31" value="2026-01-01" onchange="if(ownerPeriodMode==='custom')renderOwnerReport()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
-      <span style="font-size:12px;color:var(--text2)">to</span>
-      <input type="date" id="owner-to" min="2026-01-01" max="2026-12-31" value="2026-12-31" onchange="if(ownerPeriodMode==='custom')renderOwnerReport()" style="padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:12px;color:var(--text);outline:none">
-      <button class="or-print-btn" style="margin:0;padding:7px 14px" onclick="renderOwnerReport()"><i class="ti ti-refresh"></i> Generate</button>
+      <button class="ftab" id="opb-last" onclick="ownerPeriod('last',this)">Last month</button>
+      <button class="ftab active" id="opb-this" onclick="ownerPeriod('this',this)">This month</button>
+      <select id="owner-month-select" onchange="ownerPickMonth(this.value)" style="padding:6px 12px;border:.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);font-size:13px;color:var(--text);outline:none">
+        <option value="">Jump to month…</option>
+        <option value="2026-01">January 2026</option><option value="2026-02">February 2026</option>
+        <option value="2026-03">March 2026</option><option value="2026-04">April 2026</option>
+        <option value="2026-05">May 2026</option><option value="2026-06">June 2026</option>
+        <option value="2026-07">July 2026</option><option value="2026-08">August 2026</option>
+        <option value="2026-09">September 2026</option><option value="2026-10">October 2026</option>
+        <option value="2026-11">November 2026</option><option value="2026-12">December 2026</option>
+      </select>
+      <span style="font-size:11px;color:var(--text3);margin-left:8px"><i class="ti ti-pencil" style="font-size:12px"></i> Tip: click any number in the report to edit it before printing</span>
     </div>
   </div>
   <button class="or-print-btn" onclick="window.print()"><i class="ti ti-printer"></i> Print / Save as PDF</button>
@@ -3869,43 +3874,42 @@ function renderPaceTable(){
 }
 
 // ── OWNER REPORT — simple money summary for hands-off investors ───────────────
-let ownerPeriodMode='current';
+let ownerPeriodMode='this';      // 'this' | 'last' | 'pick'
+let ownerPickedMonth=null;        // 'YYYY-MM' when a specific month is chosen
 function ownerPeriod(mode,btn){
   ownerPeriodMode=mode;
+  ownerPickedMonth=null;
   document.querySelectorAll('#owner-controls .ftab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  document.getElementById('owner-custom-row').style.display=mode==='custom'?'flex':'none';
-  if(mode!=='custom') renderOwnerReport();
+  const sel=document.getElementById('owner-month-select'); if(sel)sel.value='';
+  renderOwnerReport();
+}
+function ownerPickMonth(val){
+  if(!val)return;
+  ownerPeriodMode='pick';
+  ownerPickedMonth=val;
+  document.querySelectorAll('#owner-controls .ftab').forEach(b=>b.classList.remove('active'));
+  renderOwnerReport();
 }
 
-// Resolve the selected reporting period → {start, end, label, isPayroll}
+// Resolve the selected reporting month → {start, end, label}
 function ownerResolvePeriod(){
   const today=getToday();
   const dNow=new Date(today+'T12:00:00');
-  const y=dNow.getFullYear(), m=dNow.getMonth(), dom=dNow.getDate();
+  const y=dNow.getFullYear(), m=dNow.getMonth();
   const iso=dt=>dt.toISOString().slice(0,10);
-  if(ownerPeriodMode==='custom'){
-    const f=document.getElementById('owner-from').value||'2026-01-01';
-    const t=document.getElementById('owner-to').value||today;
-    return {start:f,end:t,label:'Custom period',isPayroll:false};
+  const monthObj=(yy,mm)=>{
+    const start=new Date(yy,mm,1), end=new Date(yy,mm+1,0);
+    return {start:iso(start),end:iso(end),label:start.toLocaleDateString('en-US',{month:'long',year:'numeric'})};
+  };
+  if(ownerPeriodMode==='pick'&&ownerPickedMonth){
+    const yy=parseInt(ownerPickedMonth.slice(0,4)), mm=parseInt(ownerPickedMonth.slice(5,7))-1;
+    return monthObj(yy,mm);
   }
-  if(ownerPeriodMode==='month'){
-    const start=new Date(y,m,1), end=new Date(y,m+1,0);
-    return {start:iso(start),end:iso(end),label:dNow.toLocaleDateString('en-US',{month:'long',year:'numeric'}),isPayroll:false};
-  }
-  // payroll: 1–15 and 16–end halves
-  let cur;
-  if(dom<=15) cur={s:new Date(y,m,1),e:new Date(y,m,15)};
-  else        cur={s:new Date(y,m,16),e:new Date(y,m+1,0)};
   if(ownerPeriodMode==='last'){
-    // step back one half-month from current period start
-    const prevEnd=new Date(cur.s); prevEnd.setDate(prevEnd.getDate()-1);
-    const pe=prevEnd.getDate(), pm=prevEnd.getMonth(), py=prevEnd.getFullYear();
-    let ps;
-    if(pe<=15) ps=new Date(py,pm,1); else ps=new Date(py,pm,16);
-    return {start:iso(ps),end:iso(prevEnd),label:'Last payroll period',isPayroll:true};
+    return monthObj(m===0?y-1:y, m===0?11:m-1);
   }
-  return {start:iso(cur.s),end:iso(cur.e),label:'Current payroll period',isPayroll:true};
+  return monthObj(y,m); // this month
 }
 
 function renderOwnerReport(){
@@ -3990,19 +3994,13 @@ function renderOwnerReport(){
     </div>`;
   }).join('');
 
-  // Hero sub-line adapts to whether the period is past, current, or future
-  let heroBig, heroSub, heroNote;
-  if(periodHasPast&&periodHasFuture){
-    heroBig=fmt(pEarned.rev);
-    heroSub=`earned so far · ${fmt(pAhead.rev)} more on the books for the rest of this period`;
-  } else if(periodHasFuture&&!periodHasPast){
-    heroBig=fmt(pAhead.rev);
-    heroSub=`on the books — this period is in the future`;
-  } else {
-    heroBig=fmt(pEarned.rev);
-    heroSub=`earned this period`;
-  }
+  // Hero: combined (earned + on the books) is the headline for BOTH revenue and rooms.
+  const combinedRev = pTotal.rev;                          // earned + on the books
+  const combinedRooms = pTotal.rooms;                      // rooms sold + rooms on books
   const heroEarnedForSplit = periodHasPast? pEarned : pAhead;
+  const periodLabel = periodHasPast&&periodHasFuture ? 'earned so far + on the books'
+                    : periodHasFuture&&!periodHasPast ? 'on the books (future month)'
+                    : 'earned this month';
 
   // ── Ancillary revenue block (YTD) — non-room departments only, from Financial Summary.
   let deptBlock='';
@@ -4044,7 +4042,7 @@ function renderOwnerReport(){
       </div>
       <div class="or-meta">
         Generated<br><b style="color:var(--text)">${genDate}</b><br>
-        Report period<br><b style="color:var(--text)">${fmtD(period.start)} – ${fmtD(period.end)}</b>
+        Report month<br><b style="color:var(--text)">${period.label}</b>
       </div>
     </div>
 
@@ -4054,21 +4052,35 @@ function renderOwnerReport(){
       bringing total secured revenue for 2026 to <b>${fmt(ytd.rev+ahead.rev)}</b>.
     </div>
 
-    <!-- SELECTED PERIOD — HIGHLIGHTED -->
+    <!-- SELECTED MONTH — HIGHLIGHTED -->
     <div class="or-hero">
-      <div class="or-hero-label">Period · ${fmtD(period.start)} – ${fmtD(period.end)}</div>
-      <div class="or-hero-big">${heroBig}</div>
-      <div style="font-size:13px;opacity:.9">${heroSub}</div>
-      <div style="margin-top:14px;font-size:13px;opacity:.95">
-        <span style="display:inline-block;width:11px;height:11px;background:rgba(255,255,255,.95);border-radius:2px;margin-right:5px;vertical-align:middle"></span>Transient ${fmt(heroEarnedForSplit.trnRev)}
-        &nbsp;&nbsp;
-        <span style="display:inline-block;width:11px;height:11px;background:rgba(255,255,255,.55);border-radius:2px;margin-right:5px;vertical-align:middle"></span>Group ${fmt(heroEarnedForSplit.grpRev)}
+      <div class="or-hero-label">${period.label} · ${periodLabel}</div>
+
+      <!-- Combined revenue = headline -->
+      <div class="or-hero-big">${fmt(combinedRev)}</div>
+      <div style="font-size:13px;opacity:.9">total revenue for the month (earned + on the books)</div>
+      <div style="margin-top:6px;font-size:13px;opacity:.95">
+        <span style="opacity:.85">Earned so far</span> <b>${fmt(pEarned.rev)}</b>
+        &nbsp;·&nbsp;
+        <span style="opacity:.85">On the books (rest of month)</span> <b>${fmt(pAhead.rev)}</b>
       </div>
+
+      <!-- Combined rooms = headline -->
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.25)">
+        <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1">${combinedRooms.toLocaleString()} <span style="font-size:15px;font-weight:600;opacity:.85">rooms</span></div>
+        <div style="font-size:13px;opacity:.9">total rooms for the month (sold + on the books)</div>
+        <div style="margin-top:6px;font-size:13px;opacity:.95">
+          <span style="opacity:.85">Rooms sold</span> <b>${pEarned.rooms.toLocaleString()}</b>
+          &nbsp;·&nbsp;
+          <span style="opacity:.85">On the books</span> <b>${pAhead.rooms.toLocaleString()}</b>
+        </div>
+      </div>
+
       <div class="or-hero-grid">
-        <div><div class="v">${heroEarnedForSplit.rooms.toLocaleString()}</div><div class="l">Rooms sold</div></div>
-        <div><div class="v">${perAdr!=null?fmt(perAdr):(heroEarnedForSplit.rooms>0?fmt(heroEarnedForSplit.rev/heroEarnedForSplit.rooms):'—')}</div><div class="l">Average rate${periodHasPast?' (as of now)':''}</div></div>
-        <div><div class="v">${perOcc!=null?Math.round(perOcc)+'%':'—'}</div><div class="l">How full</div></div>
-        <div><div class="v">${fmt(pTotal.rev)}</div><div class="l">Period total${periodHasFuture?' (w/ on books)':''}</div></div>
+        <div><div class="v">${perAdr!=null?fmt(perAdr):(combinedRooms>0?fmt(combinedRev/combinedRooms):'—')}</div><div class="l">Average rate</div></div>
+        <div><div class="v">${perOcc!=null?Math.round(perOcc)+'%':'—'}</div><div class="l">How full (to date)</div></div>
+        <div><div class="v">${fmt(pEarned.trnRev+pAhead.trnRev)}</div><div class="l">Transient revenue</div></div>
+        <div><div class="v">${fmt(pEarned.grpRev+pAhead.grpRev)}</div><div class="l">Group revenue</div></div>
       </div>
     </div>
 
@@ -4122,10 +4134,31 @@ function renderOwnerReport(){
       Revenue by guest type is estimated from the room mix.
     </div>
   `;
-  // sync active button if entered via tab nav
-  const map={current:'opb-current',last:'opb-last',month:'opb-month',custom:'opb-custom'};
+  // sync active button
   document.querySelectorAll('#owner-controls .ftab').forEach(b=>b.classList.remove('active'));
-  const ab=document.getElementById(map[ownerPeriodMode]); if(ab)ab.classList.add('active');
+  if(ownerPeriodMode==='last'){const b=document.getElementById('opb-last');if(b)b.classList.add('active');}
+  else if(ownerPeriodMode==='this'){const b=document.getElementById('opb-this');if(b)b.classList.add('active');}
+
+  // Make every number in the report editable inline before print/save.
+  makeReportEditable();
+}
+
+// Turn number-bearing text nodes into click-to-edit fields (visual only, no recompute).
+function makeReportEditable(){
+  const wrap=document.getElementById('owner-report');
+  if(!wrap)return;
+  // Target the value elements we render: hero big, hero splits (b), grid values, card bigs, month bars, dept bars, totals.
+  const sels=['.or-hero-big','.or-hero-grid .v','.or-card-big','.or-mb-fill','.or-mb-row > div:last-child','.or-fullyear div','.or-hero b','.or-oneline b'];
+  const seen=new Set();
+  sels.forEach(sel=>{
+    wrap.querySelectorAll(sel).forEach(el=>{
+      if(seen.has(el))return; seen.add(el);
+      if(el.querySelector('*') && !el.classList.contains('or-mb-fill'))return; // skip containers with child elements (except bar fills)
+      el.setAttribute('contenteditable','true');
+      el.setAttribute('spellcheck','false');
+      el.classList.add('or-editable');
+    });
+  });
 }
 
 // ── RESERVATIONS — per-reservation channel intelligence ──────────────────────
