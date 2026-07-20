@@ -1028,6 +1028,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="card"><div class="card-title">Ancillary revenue by department — YTD</div><div class="chart-wrap-lg"><canvas id="rsDeptChart"></canvas></div></div>
     <div class="card"><div class="card-title">Ancillary composition</div><div class="chart-wrap-lg"><canvas id="rsMixChart"></canvas></div></div>
   </div>
+  <div class="card"><div class="card-title">Bar &amp; alcohol — net sales by month <span id="rs-bar-updated" style="font-size:11px;color:var(--text3);font-weight:400"></span></div><div class="chart-wrap-lg"><canvas id="rsBarMoMChart"></canvas></div></div>
   <div class="card"><div class="card-title">All departments — MTD &amp; YTD</div><div id="rs-tbl"></div></div>
 </div>
 
@@ -1081,7 +1082,7 @@ const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07'
 const MN_FULL={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
 
 const charts={};
-let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[], allPl=[], allCp=[], allCpCh=[], allDu=[], allFin=[];
+let allFc=[], allRv=[], allCh=[], allPi=[], allMo=[], allEv=[], allBi=[], allRi=[], allRt=[], allPl=[], allCp=[], allCpCh=[], allDu=[], allFin=[], allMs=[];
 let pipeCurrentMode='risk';
 
 // Calendar state
@@ -1183,6 +1184,8 @@ async function loadAll(){
     try{ allDu=await fetchTab(HUB,'Duetto Raw'); }catch(e){ allDu=[]; console.warn('Duetto Raw not available:',e.message); }
     // Financial Summary — department revenue (room + ancillary), MTD/YTD
     try{ allFin=toRows(await fetchTab(HUB,'Financial Summary')); }catch(e){ allFin=[]; console.warn('Financial Summary not available:',e.message); }
+    // Monthly Sales — bar/alcohol revenue (Square), tidy: Year|Month|Month Name|Metric|Value
+    try{ allMs=toRows(await fetchTab(HUB,'Monthly Sales')); }catch(e){ allMs=[]; console.warn('Monthly Sales not available:',e.message); }
 
     const now=new Date();
     calState.events.year=calState.groups.year=calState.rev.year=now.getFullYear();
@@ -4023,6 +4026,30 @@ function renderOwnerReport(){
         <div style="text-align:right;font-weight:600">${b.ytd<=maxV*0.16?fmt(b.ytd):''}<span style="color:var(--text3);font-weight:400;font-size:11px"> ${Math.round(share)}%</span></div>
       </div>`;
     }).join('');
+    // Bar/alcohol net sales month-over-month (from Monthly Sales) — printable div bars
+    let barMoMBlock='';
+    if(allMs.length){
+      const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const bs=barSalesByMonth(2026);
+      const bsMax=Math.max(...bs.map(v=>v||0),1);
+      const bsTotal=bs.reduce((s,v)=>s+(v||0),0);
+      const thisIdx=new Date(getToday()+'T12:00:00').getMonth();
+      const bsRows=bs.map((v,i)=>{
+        if(v==null||v===0) return `<div class="or-mb-row"><div style="font-weight:600">${MN[i]}</div><div class="or-mb-track"></div><div style="text-align:right;color:var(--text3)">—</div></div>`;
+        const w=Math.max(v/bsMax*100,3);
+        const col=i===thisIdx?'#2563eb':'#639922';
+        return `<div class="or-mb-row">
+          <div style="font-weight:600">${MN[i]}</div>
+          <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:${col}">${v>bsMax*0.16?fmt(v):''}</div></div>
+          <div style="text-align:right;font-weight:600">${v<=bsMax*0.16?fmt(v):''}</div>
+        </div>`;
+      }).join('');
+      barMoMBlock=`
+        <div class="or-section-label" style="margin-top:28px">Bar &amp; alcohol — net sales by month</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Monthly bar/alcohol net sales. Total YTD: <b>${fmt(bsTotal)}</b>.</div>
+        <div class="or-monthbars">${bsRows}</div>`;
+    }
+
     deptBlock=`
       <div class="or-section-label" style="margin-top:28px">Ancillary revenue by department — year to date</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Income beyond room sales — F&amp;B, fees, and add-ons. Percentages are each stream's share of total ancillary.</div>
@@ -4031,7 +4058,8 @@ function renderOwnerReport(){
         <div class="or-card-label" style="color:var(--chart-green)">Total ancillary revenue YTD</div>
         <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ancTotal)}</div>
         <div style="font-size:13px;color:var(--text2)">${Math.round(ancPct)}% of total revenue (room + ancillary)</div>
-      </div>`;
+      </div>
+      ${barMoMBlock}`;
   }
 
   el.innerHTML=`
@@ -4640,6 +4668,21 @@ function renderResFuture(){
 }
 
 // ── REVENUE STREAMS — ancillary / non-room revenue by department ──────────────
+// Bar (alcohol) Net sales by month for a year, from Monthly Sales tidy sheet.
+function barSalesByMonth(year){
+  const out=Array(12).fill(null);
+  allMs.forEach(r=>{
+    const yr=n(r['Year']); const mo=n(r['Month']);
+    const metric=(r['Metric']||'').trim().toLowerCase();
+    if(yr===year && mo>=1 && mo<=12 && metric==='net sales'){
+      out[mo-1]=(out[mo-1]||0)+(n(r['Value'])||0);
+    }
+  });
+  return out; // index 0=Jan
+}
+function barSalesUpdated(){
+  let latest=''; allMs.forEach(r=>{const u=r['Updated'];if(u&&u>latest)latest=u;}); return latest;
+}
 function finRows(){
   // Financial Summary: Department | MTD Actual | YTD Actual (+ TOTAL row)
   return allFin.filter(r=>{
@@ -4724,6 +4767,28 @@ function renderRevStreams(){
     <td></td></tr>`;
   tbl+='</tbody></table>';
   document.getElementById('rs-tbl').innerHTML=tbl;
+
+  // Bar/alcohol net sales month-over-month
+  renderBarMoM('rsBarMoMChart','rs-bar-updated');
+}
+
+// Shared MoM bar renderer for bar/alcohol net sales
+function renderBarMoM(canvasId,updatedId){
+  const cv=document.getElementById(canvasId); if(!cv)return;
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const data=barSalesByMonth(2026);
+  const thisMonthIdx=new Date(getToday()+'T12:00:00').getMonth();
+  const colors=data.map((v,i)=>i===thisMonthIdx?'#2563eb':'#639922');
+  if(charts[canvasId])charts[canvasId].destroy();
+  charts[canvasId]=new Chart(cv,{
+    type:'bar',
+    data:{labels:MN,datasets:[{label:'Net sales',data:data.map(v=>v==null?0:v),backgroundColor:colors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>data[c.dataIndex]==null?'no sales':fmt(data[c.dataIndex])}}},
+      scales:{x:{ticks:{font:{size:10},color:'#888780'},grid:{display:false}},
+              y:{ticks:{callback:v=>fmtK(v),font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
+  if(updatedId){const u=barSalesUpdated();const el=document.getElementById(updatedId);if(el)el.textContent=u?'· as of '+u.slice(0,10):'';}
 }
 
 loadAll();
