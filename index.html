@@ -2466,7 +2466,11 @@ function renderRevCal(){
     const ev=allEv.find(r=>r['Date']===dateStr);
     const revAct=rv?n(rv['Room Revenue']):null;
     const revTgt=rv?n(rv['Rev Target']):null;
-    const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
+    // Room count = Daily Forecast "Actual" (real materialized rooms: transient + real group pickup),
+    // read by header name. Falls back to Total Rooms if Actual not present.
+    let rooms=null;
+    if(fc&&fc['Actual']!=null&&fc['Actual']!=='') rooms=n(fc['Actual']);
+    if(rooms==null) rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
     let colorClass='red-cell'; let pctOfTarget=null;
     if(rooms!=null&&roomsGoal!=null&&roomsGoal>0){
@@ -2509,7 +2513,11 @@ function openRevDay(dateStr){
   let body='';
   if(rv||fc){
     const revAct=rv?n(rv['Room Revenue']):null;
-    const rooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
+    // Actual materialized rooms from Daily Forecast, by header name
+    const actualRooms=(fc&&fc['Actual']!=null&&fc['Actual']!=='')?n(fc['Actual']):null;
+    const totalRooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
+    const diffRooms=(fc&&fc['Diff']!=null&&fc['Diff']!=='')?n(fc['Diff']):null;
+    const rooms=actualRooms!=null?actualRooms:totalRooms;  // headline room count = Actual
     const roomsGoal=rv?n(rv['Rooms Goal']):null;
     const adrRealized=fc?n(fc['ADR Actual']):null;                 // col 4 realized — from Daily Forecast (no collision)
     const adrPlan=rv?n(rv['ADR Actual']):null;                     // col 9 plan ADR — rv collision means col9 wins, which is what we want for target
@@ -2525,7 +2533,10 @@ function openRevDay(dateStr){
     body+=`<div class="modal-kv"><span class="modal-kv-label">Room Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue Target (Goal × Plan ADR)</span><span class="modal-kv-val">${fmt(revTgt)}</span></div>`;
     if(varR!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Variance</span><span class="modal-kv-val" style="color:${varR>=0?'var(--green)':'var(--red)'}">${varR>=0?'+':''}${fmt(varR)}</span></div>`;
-    body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms sold</span><span class="modal-kv-val">${rooms!=null?rooms:'—'}</span></div>`;
+    body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms (actual)</span><span class="modal-kv-val">${rooms!=null?rooms:'—'}</span></div>`;
+    // Total forecast + unmaterialized block only meaningful when Actual differs from Total
+    if(actualRooms!=null&&totalRooms!=null&&totalRooms!==actualRooms) body+=`<div class="modal-kv"><span class="modal-kv-label">Total forecast (Duetto)</span><span class="modal-kv-val" style="color:var(--text2)">${totalRooms}</span></div>`;
+    if(diffRooms!=null&&diffRooms!==0) body+=`<div class="modal-kv"><span class="modal-kv-label">Unmaterialized block</span><span class="modal-kv-val" style="color:var(--amber)">${diffRooms>0?'+':''}${diffRooms} rooms not yet picked up</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms goal</span><span class="modal-kv-val">${roomsGoal!=null?roomsGoal:'—'}</span></div>`;
     if(varRooms!=null) body+=`<div class="modal-kv"><span class="modal-kv-label">Rooms variance</span><span class="modal-kv-val" style="color:${varRooms>=0?'var(--green)':'var(--red)'}">${varRooms>=0?'+':''}${varRooms}</span></div>`;
     body+=`<div class="modal-kv"><span class="modal-kv-label">ADR (realized)</span><span class="modal-kv-val">${fmt(adrRealized)}</span></div>`;
