@@ -1138,6 +1138,13 @@ function biRate(r){ return n(r['Rate'])||null; }
 function fmt(v){ if(v==null)return'—'; return'$'+Math.round(v).toLocaleString('en-US'); }
 function fmtK(v){ if(v==null)return'—'; if(Math.abs(v)>=1000000) return'$'+(v/1000000).toFixed(1)+'M'; if(Math.abs(v)>=1000) return'$'+(v/1000).toFixed(1)+'k'; return'$'+Math.round(v).toLocaleString(); }
 function fixOcc(v){ if(v==null)return null; return v<2?v*100:v; }
+// Realized room revenue for a Daily Revenue row — prefers the new "Actual Rev" column
+// (Actual ADR × Actual rooms), read by header name; falls back to "Room Revenue".
+function rvRev(r){
+  if(!r)return null;
+  if(r['Actual Rev']!=null&&r['Actual Rev']!=='') { const v=n(r['Actual Rev']); if(v!=null)return v; }
+  return n(r['Room Revenue']);
+}
 function normMonth(raw){ if(!raw)return null; const m=raw.trim().match(/^(\d{4})-(\d{1,2})$/); if(m)return m[1]+'-'+m[2].padStart(2,'0'); return null; }
 function moLabel(key){ return key?(MN[key.slice(5)]||key):'—'; }
 
@@ -1214,7 +1221,7 @@ function renderKPIs(){
   const adr=fc?n(fc['ADR Actual']):null;
   const bar=fc?n(fc['BAR']):null;
   const revTgt=rv?n(rv['Rev Target']):null;
-  const todayRev=rv?n(rv['Room Revenue']):null;
+  const todayRev=rvRev(rv);
   const revVar=(todayRev!=null&&revTgt!=null)?todayRev-revTgt:null;
 
   document.getElementById('k-rooms').textContent=rooms!=null?rooms:'—';
@@ -1232,7 +1239,7 @@ function renderKPIs(){
     rvSub.textContent='no target set for today';
   }
   const mtdRv=allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
-  const mtdRev=mtdRv.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
+  const mtdRev=mtdRv.reduce((s,r)=>s+(rvRev(r)||0),0);
   const mtdTgt=mtdRv.reduce((s,r)=>s+(n(r['Rev Target'])||0),0);
   const mtdVar=mtdRev-mtdTgt;
   document.getElementById('k-mtd').textContent=mtdRev>0?fmt(mtdRev):'—';
@@ -1293,7 +1300,7 @@ function renderOverviewRAG(){
     if(isCur&&!rev){
       const today2=getToday();
       const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Date']<=today2);
-      rev=mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
+      rev=mtd.reduce((s,r)=>s+(rvRev(r)||0),0)||null;
       tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null;
     }
     if(!rev&&!tgt&&mo>thisMonth)return;
@@ -1993,7 +2000,7 @@ function renderRevenue(){
       const today=getToday();
       const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Date']<=today);
       if(!rev){
-        rev=mtd.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0)||null;
+        rev=mtd.reduce((s,r)=>s+(rvRev(r)||0),0)||null;
         tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null;
       }
       if(!rooms) rooms=mtd.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0)||null;
@@ -2017,7 +2024,7 @@ function renderRevenue(){
     if(mtdD.tgt){const mv=mtdD.rev-(mtdD.tgt||0);const mvEl=document.getElementById('r-mtdvar');mvEl.textContent=(mv>=0?'+':'')+fmt(mv)+' vs target';mvEl.className='mc-delta '+(mv>=0?'up':'down');}
     const mtdRows=allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
     const totR=mtdRows.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0);
-    const totRevV=mtdRows.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
+    const totRevV=mtdRows.reduce((s,r)=>s+(rvRev(r)||0),0);
     document.getElementById('r-mtd-adr').textContent=totR>0?fmt(totRevV/totR):'—';
     const mtdDayCount=mtdRows.filter(r=>r['Date']<=getToday()).length||1;
     const rpEl=document.getElementById('r-mtd-revpar');
@@ -2109,7 +2116,7 @@ function renderDOW(){
   const buckets=DOW.map(()=>({days:0,rooms:0,rev:0}));
   allRv.filter(r=>r['Date']&&r['Date']<=today&&r['Date']>='2026-01-01').forEach(r=>{
     const i=dowIdx(r['Date']);
-    const rooms=n(r['Total Rooms'])||0; const rev=n(r['Room Revenue'])||0;
+    const rooms=n(r['Total Rooms'])||0; const rev=rvRev(r)||0;
     if(rooms>0||rev>0){buckets[i].days++;buckets[i].rooms+=rooms;buckets[i].rev+=rev;}
   });
   const occs=buckets.map(b=>b.days>0?Math.round(b.rooms/(b.days*ROOMS_TOTAL)*1000)/10:null);
@@ -2279,7 +2286,7 @@ function openEventDay(dateStr){
     body+='</div>';
   }
   if(rv){
-    const revTgt=n(rv['Rev Target']); const revAct=n(rv['Room Revenue']); const vr=revAct&&revTgt?revAct-revTgt:null;
+    const revTgt=n(rv['Rev Target']); const revAct=rvRev(rv); const vr=revAct&&revTgt?revAct-revTgt:null;
     if(revTgt||revAct){
       body+='<div class="modal-section"><div class="modal-section-title">vs Target</div>';
       body+=`<div class="modal-kv"><span class="modal-kv-label">Revenue</span><span class="modal-kv-val">${fmt(revAct)}</span></div>`;
@@ -2464,7 +2471,7 @@ function renderRevCal(){
     const rv=allRv.find(r=>r['Date']===dateStr);
     const fc=allFc.find(r=>r['Date']===dateStr);
     const ev=allEv.find(r=>r['Date']===dateStr);
-    const revAct=rv?n(rv['Room Revenue']):null;
+    const revAct=rvRev(rv);
     const revTgt=rv?n(rv['Rev Target']):null;
     // Room count = Daily Forecast "Actual" (real materialized rooms: transient + real group pickup),
     // read by header name. Falls back to Total Rooms if Actual not present.
@@ -2512,7 +2519,7 @@ function openRevDay(dateStr){
   const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let body='';
   if(rv||fc){
-    const revAct=rv?n(rv['Room Revenue']):null;
+    const revAct=rvRev(rv);
     // Actual materialized rooms from Daily Forecast, by header name
     const actualRooms=(fc&&fc['Actual']!=null&&fc['Actual']!=='')?n(fc['Actual']):null;
     const totalRooms=rv?n(rv['Total Rooms']):(fc?n(fc['Total Rooms']):null);
@@ -2632,7 +2639,7 @@ function renderActions(){
     action:'Verify pickup with group coordinators. Extend, release, or hold.'
   });
   const mtdRv=allRv.filter(r=>r['Date']&&r['Date'].startsWith(thisMonth));
-  const mtdRev=mtdRv.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0);
+  const mtdRev=mtdRv.reduce((s,r)=>s+(rvRev(r)||0),0);
   const mtdTgt=mtdRv.reduce((s,r)=>s+(n(r['Rev Target'])||0),0);
   if(mtdTgt>1000&&mtdRev<mtdTgt*0.95){
     const gap=mtdTgt-mtdRev;
@@ -3936,7 +3943,7 @@ function renderOwnerReport(){
   function revSplit(rows){
     let rev=0, rooms=0, trnRooms=0, grpRooms=0;
     rows.forEach(r=>{
-      const rv=n(r['Room Revenue'])||0;
+      const rv=rvRev(r)||0;
       const tr=n(r['Total Rooms'])||0;
       const t=n(r['Transient Rooms'])||0;
       const g=n(r['Group Rooms'])||0;
@@ -3993,7 +4000,7 @@ function renderOwnerReport(){
   const thisMonth=getThisMonth();
   const moRevs=MONTHS.map(mo=>{
     const rows=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo));
-    return {mo,rev:rows.reduce((s,r)=>s+(n(r['Room Revenue'])||0),0),earned:mo<thisMonth,cur:mo===thisMonth};
+    return {mo,rev:rows.reduce((s,r)=>s+(rvRev(r)||0),0),earned:mo<thisMonth,cur:mo===thisMonth};
   });
   const maxRev=Math.max(...moRevs.map(m=>m.rev),1);
   const monthBars=moRevs.map(m=>{
