@@ -2066,7 +2066,7 @@ function renderRevenue(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
-  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Rooms / Goal</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
+  let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Rooms / Goal</th><th>Monthly ADR</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
   // accumulate totals for the bottom row
   let tRev=0,tTgt=0,tRooms=0,tGoal=0,tDays=0;
   moData.forEach(d=>{
@@ -2080,9 +2080,11 @@ function renderRevenue(){
     const moGoal=allRv.filter(r=>r['Date']&&r['Date'].startsWith(d.mo)).reduce((s,r)=>s+(n(r['Rooms Goal'])||0),0);
     const rgVar=(d.rooms!=null&&moGoal>0)?d.rooms-moGoal:null;
     tRev+=(d.rev||0); tTgt+=(d.tgt||0); tRooms+=(d.rooms||0); tGoal+=moGoal; tDays+=dim;
+    const moAdr=(d.rev&&d.rooms&&d.rooms>0)?d.rev/d.rooms:null;
     tbl+=`<tr><td style="font-weight:600">${moLabel(d.mo)}${sfx}</td><td>${fmt(d.rev)}</td><td>${fmt(d.tgt)}</td>
       <td class="${vd==null?'':vd>=0?'up':'down'}">${vd!=null?(vd>=0?'+':'')+fmt(vd)+' ('+(vp>=0?'+':'')+vp+'%)':'—'}</td>
       <td><span style="font-weight:600">${d.rooms!=null?Math.round(d.rooms).toLocaleString():'—'}</span>${moGoal>0?'<span style="color:var(--text2)"> / '+moGoal.toLocaleString()+'</span>':''}${rgVar!=null?`<div style="font-size:10px;color:${rgVar>=0?'var(--green)':'var(--red)'}">${rgVar>=0?'+':''}${rgVar.toLocaleString()}</div>`:''}</td>
+      <td style="font-weight:600">${moAdr!=null?fmt(moAdr):'—'}</td>
       <td>${occ!=null?occ+'%':'—'}</td>
       <td style="font-weight:600">${revpar!=null?fmt(revpar):'—'}</td></tr>`;
   });
@@ -2093,12 +2095,14 @@ function renderRevenue(){
     const tRgVar=tGoal>0?Math.round(tRooms)-tGoal:null;
     const tOcc=tDays>0?Math.round(tRooms/(tDays*ROOMS_TOTAL)*1000)/10:null;
     const tRevpar=tDays>0&&tRev>0?tRev/(tDays*ROOMS_TOTAL):null;
+    const tAdr=tRooms>0&&tRev>0?tRev/tRooms:null;
     tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
       <td style="font-weight:700">Total</td>
       <td style="font-weight:700">${tRev>0?fmt(tRev):'—'}</td>
       <td style="font-weight:700">${tTgt>0?fmt(tTgt):'—'}</td>
       <td style="font-weight:700" class="${tVd==null?'':tVd>=0?'up':'down'}">${tVd!=null?(tVd>=0?'+':'')+fmt(tVd)+' ('+(tVp>=0?'+':'')+tVp+'%)':'—'}</td>
       <td><span style="font-weight:700">${Math.round(tRooms).toLocaleString()}</span>${tGoal>0?'<span style="color:var(--text2)"> / '+tGoal.toLocaleString()+'</span>':''}${tRgVar!=null?`<div style="font-size:10px;color:${tRgVar>=0?'var(--green)':'var(--red)'}">${tRgVar>=0?'+':''}${tRgVar.toLocaleString()}</div>`:''}</td>
+      <td style="font-weight:700">${tAdr!=null?fmt(tAdr):'—'}</td>
       <td style="font-weight:700">${tOcc!=null?tOcc+'%':'—'}</td>
       <td style="font-weight:700">${tRevpar!=null?fmt(tRevpar):'—'}</td>
     </tr>`;
@@ -4018,10 +4022,6 @@ function renderOwnerReport(){
   // Hero: combined (earned + on the books) is the headline for BOTH revenue and rooms.
   const combinedRev = pTotal.rev;                          // earned + on the books
   const combinedRooms = pTotal.rooms;                      // rooms sold + rooms on books
-  const heroEarnedForSplit = periodHasPast? pEarned : pAhead;
-  const periodLabel = periodHasPast&&periodHasFuture ? 'earned so far + on the books'
-                    : periodHasFuture&&!periodHasPast ? 'on the books (future month)'
-                    : 'earned this month';
 
   // ── Ancillary revenue block (YTD) — non-room departments only, from Financial Summary.
   let deptBlock='';
@@ -4044,28 +4044,23 @@ function renderOwnerReport(){
         <div style="text-align:right;font-weight:600">${b.ytd<=maxV*0.16?fmt(b.ytd):''}<span style="color:var(--text3);font-weight:400;font-size:11px"> ${Math.round(share)}%</span></div>
       </div>`;
     }).join('');
-    // Bar/alcohol net sales month-over-month (from Monthly Sales) — printable div bars
+    // Bar/alcohol net sales — single YTD total line (like an ancillary dept), not month-over-month
     let barMoMBlock='';
     if(allMs.length){
-      const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const bs=barSalesByMonth(2026);
-      const bsMax=Math.max(...bs.map(v=>v||0),1);
       const bsTotal=bs.reduce((s,v)=>s+(v||0),0);
-      const thisIdx=new Date(getToday()+'T12:00:00').getMonth();
-      const bsRows=bs.map((v,i)=>{
-        if(v==null||v===0) return `<div class="or-mb-row"><div style="font-weight:600">${MN[i]}</div><div class="or-mb-track"></div><div style="text-align:right;color:var(--text3)">—</div></div>`;
-        const w=Math.max(v/bsMax*100,3);
-        const col=i===thisIdx?'#2563eb':'#639922';
-        return `<div class="or-mb-row">
-          <div style="font-weight:600">${MN[i]}</div>
-          <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:${col}">${v>bsMax*0.16?fmt(v):''}</div></div>
-          <div style="text-align:right;font-weight:600">${v<=bsMax*0.16?fmt(v):''}</div>
-        </div>`;
-      }).join('');
-      barMoMBlock=`
-        <div class="or-section-label" style="margin-top:28px">Bar &amp; alcohol — net sales by month</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Monthly bar/alcohol net sales. Total YTD: <b>${fmt(bsTotal)}</b>.</div>
-        <div class="or-monthbars">${bsRows}</div>`;
+      if(bsTotal>0){
+        const w=Math.max(bsTotal/Math.max(ancTotal,bsTotal,1)*100,2);
+        barMoMBlock=`
+          <div class="or-section-label" style="margin-top:28px">Bar &amp; alcohol — net sales YTD</div>
+          <div class="or-monthbars">
+            <div class="or-mb-row">
+              <div style="font-weight:600">Bar &amp; alcohol</div>
+              <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:#8B5CF6">${fmt(bsTotal)}</div></div>
+              <div style="text-align:right;font-weight:600"></div>
+            </div>
+          </div>`;
+      }
     }
 
     deptBlock=`
@@ -4092,46 +4087,42 @@ function renderOwnerReport(){
       </div>
     </div>
 
-    <div class="or-oneline">
-      Through ${dNow.toLocaleDateString('en-US',{month:'long',day:'numeric'})}, the hotel has earned <b>${fmt(ytd.rev)}</b> this year,
-      with <b>${fmt(ahead.rev)}</b> more already booked for the months ahead —
-      bringing total secured revenue for 2026 to <b>${fmt(ytd.rev+ahead.rev)}</b>.
-    </div>
-
     <!-- SELECTED MONTH — HIGHLIGHTED -->
     <div class="or-hero">
-      <div class="or-hero-label">${period.label} · ${periodLabel}</div>
-
-      <!-- Combined revenue = headline -->
+      <div class="or-hero-label">${period.label}</div>
       <div class="or-hero-big">${fmt(combinedRev)}</div>
-      <div style="font-size:13px;opacity:.9">total revenue for the month (earned + on the books)</div>
-      <div style="margin-top:6px;font-size:13px;opacity:.95">
-        <span style="opacity:.85">Earned so far</span> <b>${fmt(pEarned.rev)}</b>
-        &nbsp;·&nbsp;
-        <span style="opacity:.85">On the books (rest of month)</span> <b>${fmt(pAhead.rev)}</b>
-      </div>
 
-      <!-- Combined rooms = headline -->
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.25)">
         <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1">${combinedRooms.toLocaleString()} <span style="font-size:15px;font-weight:600;opacity:.85">rooms</span></div>
-        <div style="font-size:13px;opacity:.9">total rooms for the month (sold + on the books)</div>
-        <div style="margin-top:6px;font-size:13px;opacity:.95">
-          <span style="opacity:.85">Rooms sold</span> <b>${pEarned.rooms.toLocaleString()}</b>
-          &nbsp;·&nbsp;
-          <span style="opacity:.85">On the books</span> <b>${pAhead.rooms.toLocaleString()}</b>
-        </div>
       </div>
 
       <div class="or-hero-grid">
         <div><div class="v">${perAdr!=null?fmt(perAdr):(combinedRooms>0?fmt(combinedRev/combinedRooms):'—')}</div><div class="l">Average rate</div></div>
-        <div><div class="v">${perOcc!=null?Math.round(perOcc)+'%':'—'}</div><div class="l">How full (to date)</div></div>
+        <div><div class="v">${perOcc!=null?Math.round(perOcc)+'%':'—'}</div><div class="l">How full</div></div>
         <div><div class="v">${fmt(pEarned.trnRev+pAhead.trnRev)}</div><div class="l">Transient revenue</div></div>
         <div><div class="v">${fmt(pEarned.grpRev+pAhead.grpRev)}</div><div class="l">Group revenue</div></div>
       </div>
     </div>
 
+    ${deptBlock}
+
+    <div class="or-section-label">Revenue by month</div>
+    <div class="or-monthbars">${monthBars}</div>
+    <div style="display:flex;gap:18px;font-size:11px;color:var(--text2);margin-top:12px">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#639922;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Earned</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;vertical-align:middle;margin-right:4px"></span>This month</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#9CC265;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Booked ahead</span>
+    </div>
+
+    <div class="or-fullyear" style="margin-top:28px">
+      <div class="or-card-label" style="color:var(--chart-green)">Total secured revenue — 2026</div>
+      <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ytd.rev+ahead.rev)}</div>
+      <div style="font-size:13px;color:var(--text2)">${fmt(ytd.rev)} earned + ${fmt(ahead.rev)} already booked ahead</div>
+      <div style="margin-top:12px">${splitBar(fullYear.trnRev,fullYear.grpRev)}</div>
+    </div>
+
     <!-- BIGGER PICTURE -->
-    <div class="or-section-label">The bigger picture — full year</div>
+    <div class="or-section-label" style="margin-top:28px">The bigger picture — full year</div>
     <div class="or-cards">
       <div class="or-card">
         <div class="or-card-label">Year so far</div>
@@ -4155,23 +4146,6 @@ function renderOwnerReport(){
         </div>
       </div>
     </div>
-
-    <div class="or-fullyear">
-      <div class="or-card-label" style="color:var(--chart-green)">Total secured revenue — 2026</div>
-      <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ytd.rev+ahead.rev)}</div>
-      <div style="font-size:13px;color:var(--text2)">${fmt(ytd.rev)} earned + ${fmt(ahead.rev)} already booked ahead</div>
-      <div style="margin-top:12px">${splitBar(fullYear.trnRev,fullYear.grpRev)}</div>
-    </div>
-
-    <div class="or-section-label">Revenue by month</div>
-    <div class="or-monthbars">${monthBars}</div>
-    <div style="display:flex;gap:18px;font-size:11px;color:var(--text2);margin-top:12px">
-      <span><span style="display:inline-block;width:10px;height:10px;background:#639922;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Earned</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;vertical-align:middle;margin-right:4px"></span>This month</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#9CC265;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Booked ahead</span>
-    </div>
-
-    ${deptBlock}
 
     <div class="or-foot">
       All room-revenue figures are from this dashboard's live booking data; department revenue is from the Financial Summary (net of adjustments).
