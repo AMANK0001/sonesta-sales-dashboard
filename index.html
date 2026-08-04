@@ -4029,7 +4029,13 @@ function renderOwnerReport(){
     const isRoom=d=>/room revenue/i.test(d);
     const ancRows=allFin.filter(r=>{const d=(r['Department']||'').trim();return d&&d.toUpperCase()!=='TOTAL'&&!isRoom(d);});
     const finV=(r)=>{const v=n(r['YTD Actual']); return v!=null?v:(n(r['YTD'])||0);};
-    const ancSorted=[...ancRows].map(r=>({name:r['Department'],ytd:finV(r)})).filter(x=>x.ytd).sort((a,b)=>b.ytd-a.ytd);
+    let ancList=ancRows.map(r=>({name:r['Department'],ytd:finV(r)})).filter(x=>x.ytd);
+    // Bar/alcohol (Monthly Sales) is just another ancillary department
+    if(allMs.length){
+      const bsTotal=barSalesByMonth(2026).reduce((s,v)=>s+(v||0),0);
+      if(bsTotal>0) ancList.push({name:'Bar & alcohol',ytd:bsTotal});
+    }
+    const ancSorted=ancList.sort((a,b)=>b.ytd-a.ytd);
     const ancTotal=ancSorted.reduce((s,x)=>s+x.ytd,0);
     const roomRev=ytd.rev;
     const grandTotal=roomRev+ancTotal;
@@ -4044,24 +4050,6 @@ function renderOwnerReport(){
         <div style="text-align:right;font-weight:600">${b.ytd<=maxV*0.16?fmt(b.ytd):''}<span style="color:var(--text3);font-weight:400;font-size:11px"> ${Math.round(share)}%</span></div>
       </div>`;
     }).join('');
-    // Bar/alcohol net sales — single YTD total line (like an ancillary dept), not month-over-month
-    let barMoMBlock='';
-    if(allMs.length){
-      const bs=barSalesByMonth(2026);
-      const bsTotal=bs.reduce((s,v)=>s+(v||0),0);
-      if(bsTotal>0){
-        const w=Math.max(bsTotal/Math.max(ancTotal,bsTotal,1)*100,2);
-        barMoMBlock=`
-          <div class="or-section-label" style="margin-top:28px">Bar &amp; alcohol — net sales YTD</div>
-          <div class="or-monthbars">
-            <div class="or-mb-row">
-              <div style="font-weight:600">Bar &amp; alcohol</div>
-              <div class="or-mb-track"><div class="or-mb-fill" style="width:${w}%;background:#8B5CF6">${fmt(bsTotal)}</div></div>
-              <div style="text-align:right;font-weight:600"></div>
-            </div>
-          </div>`;
-      }
-    }
 
     deptBlock=`
       <div class="or-section-label" style="margin-top:28px">Ancillary revenue by department — year to date</div>
@@ -4071,8 +4059,7 @@ function renderOwnerReport(){
         <div class="or-card-label" style="color:var(--chart-green)">Total ancillary revenue YTD</div>
         <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ancTotal)}</div>
         <div style="font-size:13px;color:var(--text2)">${Math.round(ancPct)}% of total revenue (room + ancillary)</div>
-      </div>
-      ${barMoMBlock}`;
+      </div>`;
   }
 
   el.innerHTML=`
@@ -4699,7 +4686,16 @@ function renderRevStreams(){
   const rows=finRows();
   const isRoom=d=>/room revenue/i.test(d);
   const roomRow=rows.find(r=>isRoom(r['Department']));
-  const ancRows=rows.filter(r=>!isRoom(r['Department']));
+  let ancRows=rows.filter(r=>!isRoom(r['Department']));
+
+  // Bar/alcohol from Monthly Sales — inject as a synthetic ancillary department
+  const barMonths=barSalesByMonth(2026);
+  const barYTD=barMonths.reduce((s,v)=>s+(v||0),0);
+  const curMoIdx=new Date(getToday()+'T12:00:00').getMonth();
+  const barMTD=barMonths[curMoIdx]||0;
+  if(barYTD>0){
+    ancRows=ancRows.concat([{'Department':'Bar & alcohol','YTD Actual':barYTD,'MTD Actual':barMTD,_bar:true}]);
+  }
 
   const roomYTD=roomRow?finVal(roomRow,'ytd')||0:0;
   const roomMTD=roomRow?finVal(roomRow,'mtd')||0:0;
