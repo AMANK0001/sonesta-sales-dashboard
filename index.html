@@ -4024,7 +4024,7 @@ function renderOwnerReport(){
   const combinedRooms = pTotal.rooms;                      // rooms sold + rooms on books
 
   // ── Ancillary revenue block (YTD) — non-room departments only, from Financial Summary.
-  let deptBlock='';
+  let ancTotalBlock='', ancBreakdownBlock='';
   if(allFin.length){
     const isRoom=d=>/room revenue/i.test(d);
     const ancRows=allFin.filter(r=>{const d=(r['Department']||'').trim();return d&&d.toUpperCase()!=='TOTAL'&&!isRoom(d);});
@@ -4052,14 +4052,16 @@ function renderOwnerReport(){
     }).join('');
 
     deptBlock=`
-      <div class="or-section-label" style="margin-top:28px">Ancillary revenue by department — year to date</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Income beyond room sales — F&amp;B, fees, and add-ons. Percentages are each stream's share of total ancillary.</div>
-      <div class="or-monthbars">${rowsHtml}</div>
-      <div class="or-fullyear" style="margin-top:18px">
+    ancTotalBlock=`
+      <div class="or-fullyear" style="margin-top:28px">
         <div class="or-card-label" style="color:var(--chart-green)">Total ancillary revenue YTD</div>
         <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ancTotal)}</div>
         <div style="font-size:13px;color:var(--text2)">${Math.round(ancPct)}% of total revenue (room + ancillary)</div>
       </div>`;
+    ancBreakdownBlock=`
+      <div class="or-section-label" style="margin-top:28px">Ancillary revenue by department — year to date</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Income beyond room sales — F&amp;B, fees, and add-ons. Percentages are each stream's share of total ancillary.</div>
+      <div class="or-monthbars">${rowsHtml}</div>`;
   }
 
   el.innerHTML=`
@@ -4091,21 +4093,12 @@ function renderOwnerReport(){
       </div>
     </div>
 
-    ${deptBlock}
-
     <div class="or-section-label">Revenue by month</div>
     <div class="or-monthbars">${monthBars}</div>
     <div style="display:flex;gap:18px;font-size:11px;color:var(--text2);margin-top:12px">
       <span><span style="display:inline-block;width:10px;height:10px;background:#639922;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Earned</span>
       <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;vertical-align:middle;margin-right:4px"></span>This month</span>
       <span><span style="display:inline-block;width:10px;height:10px;background:#9CC265;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Booked ahead</span>
-    </div>
-
-    <div class="or-fullyear" style="margin-top:28px">
-      <div class="or-card-label" style="color:var(--chart-green)">Total secured revenue — 2026</div>
-      <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ytd.rev+ahead.rev)}</div>
-      <div style="font-size:13px;color:var(--text2)">${fmt(ytd.rev)} earned + ${fmt(ahead.rev)} already booked ahead</div>
-      <div style="margin-top:12px">${splitBar(fullYear.trnRev,fullYear.grpRev)}</div>
     </div>
 
     <!-- BIGGER PICTURE -->
@@ -4133,6 +4126,16 @@ function renderOwnerReport(){
         </div>
       </div>
     </div>
+
+    <div class="or-fullyear" style="margin-top:28px">
+      <div class="or-card-label" style="color:var(--chart-green)">Total secured revenue — 2026</div>
+      <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;margin:8px 0;color:var(--text)">${fmt(ytd.rev+ahead.rev)}</div>
+      <div style="font-size:13px;color:var(--text2)">${fmt(ytd.rev)} earned + ${fmt(ahead.rev)} already booked ahead</div>
+      <div style="margin-top:12px">${splitBar(fullYear.trnRev,fullYear.grpRev)}</div>
+    </div>
+
+    ${ancTotalBlock}
+    ${ancBreakdownBlock}
 
     <div class="or-foot">
       All room-revenue figures are from this dashboard's live booking data; department revenue is from the Financial Summary (net of adjustments).
