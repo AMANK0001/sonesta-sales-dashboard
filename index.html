@@ -4051,7 +4051,6 @@ function renderOwnerReport(){
       </div>`;
     }).join('');
 
-    deptBlock=`
     ancTotalBlock=`
       <div class="or-fullyear" style="margin-top:28px">
         <div class="or-card-label" style="color:var(--chart-green)">Total ancillary revenue YTD</div>
@@ -4083,6 +4082,7 @@ function renderOwnerReport(){
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.25)">
         <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1">${combinedRooms.toLocaleString()} <span style="font-size:15px;font-weight:600;opacity:.85">rooms</span></div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">total guaranteed reservations (transient + group pickup)</div>
       </div>
 
       <div class="or-hero-grid">
@@ -4107,13 +4107,13 @@ function renderOwnerReport(){
       <div class="or-card">
         <div class="or-card-label">Year so far</div>
         <div class="or-card-big">${fmt(ytd.rev)}</div>
-        <div class="or-card-note">${ytd.rooms.toLocaleString()} rooms sold · ${ytdAdr!=null?fmt(ytdAdr):'—'} avg rate · ${Math.round(ytdOcc)}% full</div>
+        <div class="or-card-note">${ytd.rooms.toLocaleString()} guaranteed reservations · ${ytdAdr!=null?fmt(ytdAdr):'—'} avg rate · ${Math.round(ytdOcc)}% full</div>
         ${splitBar(ytd.trnRev,ytd.grpRev)}
       </div>
       <div class="or-card">
         <div class="or-card-label">On the books ahead</div>
         <div class="or-card-big">${fmt(ahead.rev)}</div>
-        <div class="or-card-note">${ahead.rooms.toLocaleString()} rooms already booked · rest of ${yr}</div>
+        <div class="or-card-note">${ahead.rooms.toLocaleString()} guaranteed reservations · rest of ${yr}</div>
         ${splitBar(ahead.trnRev,ahead.grpRev)}
       </div>
       <div class="or-card">
@@ -4138,7 +4138,8 @@ function renderOwnerReport(){
     ${ancBreakdownBlock}
 
     <div class="or-foot">
-      All room-revenue figures are from this dashboard's live booking data; department revenue is from the Financial Summary (net of adjustments).
+      All figures are total guaranteed reservations — transient bookings plus actual group pickup (unmaterialized block is excluded).
+      Room revenue is from this dashboard's live booking data; department revenue is from the Financial Summary (net of adjustments).
       "On the books" means rooms already reserved for future dates.
       Transient = individual guests · Group = blocks, weddings, teams, and events.
       Revenue by guest type is estimated from the room mix.
