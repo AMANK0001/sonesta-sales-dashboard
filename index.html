@@ -4102,16 +4102,16 @@ function renderOwnerReport(){
     </div>
 
     <!-- BIGGER PICTURE -->
-    <div class="or-section-label" style="margin-top:28px">The bigger picture — full year</div>
+    <div class="or-section-label" style="margin-top:28px">Full year</div>
     <div class="or-cards">
       <div class="or-card">
-        <div class="or-card-label">Year so far</div>
+        <div class="or-card-label">Year to date</div>
         <div class="or-card-big">${fmt(ytd.rev)}</div>
         <div class="or-card-note">${ytd.rooms.toLocaleString()} guaranteed reservations · ${ytdAdr!=null?fmt(ytdAdr):'—'} avg rate · ${Math.round(ytdOcc)}% full</div>
         ${splitBar(ytd.trnRev,ytd.grpRev)}
       </div>
       <div class="or-card">
-        <div class="or-card-label">On the books ahead</div>
+        <div class="or-card-label">Remaining year</div>
         <div class="or-card-big">${fmt(ahead.rev)}</div>
         <div class="or-card-note">${ahead.rooms.toLocaleString()} guaranteed reservations · rest of ${yr}</div>
         ${splitBar(ahead.trnRev,ahead.grpRev)}
