@@ -3982,7 +3982,8 @@ function renderOwnerReport(){
   const ytdOcc = ytd.rooms/(ytdDays*ROOMS_TOTAL)*100;
   const ytdAdr = ytd.rooms>0? ytd.rev/ytd.rooms : null;
   // Full-year ADR (earned + on the books) — forward-looking average rate for all 2026
-  const fyAdr = fullYear.rooms>0? fullYear.rev/fullYear.rooms : null;
+  // Full-year ADR on guaranteed reservations only (earned/materialized), excluding on-the-books
+  const fyAdr = ytd.rooms>0? ytd.rev/ytd.rooms : null;
 
   const fmtD=ds=>new Date(ds+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const dNow=new Date(today+'T12:00:00');
@@ -4119,11 +4120,7 @@ function renderOwnerReport(){
       <div class="or-card">
         <div class="or-card-label">Average daily rate</div>
         <div class="or-card-big">${ytdAdr!=null?fmt(ytdAdr):'—'}</div>
-        <div class="or-card-note">year so far (as of today)</div>
-        <div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border)">
-          <div style="font-size:20px;font-weight:700;color:var(--text)">${fyAdr!=null?fmt(fyAdr):'—'}</div>
-          <div class="or-card-note">full year (earned + on the books)</div>
-        </div>
+        <div class="or-card-note">guaranteed reservations (as of today)</div>
       </div>
     </div>
 
