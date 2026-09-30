@@ -372,6 +372,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
       <div class="card-title">Group segment mix (room nights)</div>
       <div id="gr-segment-bars"></div>
     </div>
+    <div class="card">
+      <div class="card-title">Transient vs group split — by month</div>
+      <div class="legend"><span><span class="legend-sq" style="background:var(--chart-blue)"></span>Transient</span><span><span class="legend-sq" style="background:var(--chart-green)"></span>Group</span></div>
+      <div class="chart-wrap-lg"><canvas id="splitChart"></canvas></div>
+    </div>
   </div>
 
   <!-- By block panel -->
@@ -455,11 +460,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     <div class="chart-wrap-lg"><canvas id="revChart"></canvas></div>
   </div>
   <div class="two-col">
-    <div class="card"><div class="card-title">Month-by-month detail</div><div id="monthly-tbl"></div></div>
-    <div class="card"><div class="card-title">Transient vs group split</div>
-      <div class="legend"><span><span class="legend-sq" style="background:var(--chart-blue)"></span>Transient</span><span><span class="legend-sq" style="background:var(--chart-green)"></span>Group</span></div>
-      <div class="chart-wrap"><canvas id="splitChart"></canvas></div>
-    </div>
+    <div class="card"><div class="card-title">Month-by-month detail — 2026</div><div style="overflow-x:auto"><div id="monthly-tbl"></div></div></div>
+    <div class="card"><div class="card-title">Month-by-month detail — 2027</div><div style="overflow-x:auto"><div id="monthly-tbl-2027"></div></div></div>
   </div>
   <div class="two-col">
     <div class="card"><div class="card-title">Day-of-week performance — YTD actuals</div>
@@ -1615,10 +1617,30 @@ function grRevTab(tab,btn){
 function renderGroupsRevenue(){
   renderGrKPIs();
   renderGrSummaryCharts();
+  renderTrnGrpSplit();
   renderGrByBlock();
   renderGrByMonth();
   renderGrByMarket();
   // nightly select populated on load
+}
+
+// Transient vs group split by month (moved here from the Revenue tab)
+function renderTrnGrpSplit(){
+  const cv=document.getElementById('splitChart'); if(!cv)return;
+  const MONTHS=Array.from({length:12},(_,i)=>'2026-'+String(i+1).padStart(2,'0'));
+  const data=MONTHS.map(mo=>{
+    const row=allMo.find(r=>r._mo===mo);
+    return {mo,trn:row?n(row['Transient %']):null,grp:row?n(row['Group %']):null};
+  }).filter(d=>d.trn!=null||d.grp!=null);
+  if(charts.split)charts.split.destroy();
+  charts.split=new Chart(cv,{
+    type:'bar',data:{labels:data.map(d=>moLabel(d.mo)),datasets:[
+      {label:'Transient %',data:data.map(d=>d.trn?Math.round(d.trn):null),backgroundColor:'#378ADD',borderRadius:2},
+      {label:'Group %',data:data.map(d=>d.grp?Math.round(d.grp):null),backgroundColor:'#639922',borderRadius:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+'%'}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
+  });
 }
 
 function renderGrKPIs(){
@@ -2057,17 +2079,37 @@ function renderRevenue(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},
       scales:{x:{ticks:{font:{size:11},color:'#888780'},grid:{display:false}},y:{ticks:{callback:v=>'$'+Math.round(v/1000)+'k',font:{size:11},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
   });
-  if(charts.split)charts.split.destroy();
-  charts.split=new Chart(document.getElementById('splitChart'),{
-    type:'bar',data:{labels:moData.map(d=>moLabel(d.mo)),datasets:[
-      {label:'Transient %',data:moData.map(d=>d.trn?Math.round(d.trn):null),backgroundColor:'#378ADD',borderRadius:2},
-      {label:'Group %',data:moData.map(d=>d.grp?Math.round(d.grp):null),backgroundColor:'#639922',borderRadius:2}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{stacked:true,ticks:{font:{size:10},color:'#888780'},grid:{display:false}},y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:10},color:'#888780'},grid:{color:'rgba(136,135,128,0.12)'}}}}
-  });
+  document.getElementById('monthly-tbl').innerHTML=buildMonthlyTable(2026);
+  const t27=document.getElementById('monthly-tbl-2027');
+  if(t27) t27.innerHTML=buildMonthlyTable(2027);
+
+  renderDOW();
+}
+
+// Reusable month-by-month table for a given year. Reads Monthly Summary (allMo)
+// filtered to that year; targets/rooms/rev all come from the Data Hub as populated.
+function buildMonthlyTable(year){
+  const thisMonth=getThisMonth();
+  const yp=String(year);
+  const MONTHS=Array.from({length:12},(_,i)=>yp+'-'+String(i+1).padStart(2,'0'));
+  const moData=MONTHS.map(mo=>{
+    const row=allMo.find(r=>r._mo===mo);
+    let rev=row?n(row['Room Revenue']):null,tgt=row?n(row['Revenue Target']):null;
+    let rooms=row?n(row['Total Rooms']):null,occ=row?n(row['Avg Occ%']):null;
+    if(mo===thisMonth&&(!rev||!rooms)){
+      const today=getToday();
+      const mtd=allRv.filter(r=>r['Date']&&r['Date'].startsWith(mo)&&r['Date']<=today);
+      if(!rev){ rev=mtd.reduce((s,r)=>s+(rvRev(r)||0),0)||null; tgt=mtd.reduce((s,r)=>s+(n(r['Rev Target'])||0),0)||null; }
+      if(!rooms) rooms=mtd.reduce((s,r)=>s+(n(r['Total Rooms'])||0),0)||null;
+    }
+    return{mo,rev,tgt,rooms,occ};
+  }).filter(d=>d.rev!=null||d.rooms!=null||d.tgt!=null);
+
+  if(!moData.length){
+    return `<div class="empty" style="padding:1.5rem">No ${year} data in Monthly Summary yet.</div>`;
+  }
+
   let tbl='<table class="tbl"><thead><tr><th>Month</th><th>Revenue</th><th>Target</th><th>Variance</th><th>Rooms / Goal</th><th>Monthly ADR</th><th>Occ%</th><th>RevPAR</th></tr></thead><tbody>';
-  // accumulate totals for the bottom row
   let tRev=0,tTgt=0,tRooms=0,tGoal=0,tDays=0;
   moData.forEach(d=>{
     const vd=(d.rev&&d.tgt&&d.tgt>1000)?d.rev-d.tgt:null;
@@ -2076,7 +2118,6 @@ function renderRevenue(){
     const sfx=d.mo===thisMonth?' (MTD)':d.mo<thisMonth?' ✓':'';
     const dim=new Date(parseInt(d.mo.slice(0,4)),parseInt(d.mo.slice(5)),0).getDate();
     const revpar=d.rev?d.rev/(dim*ROOMS_TOTAL):null;
-    // Rooms goal for the month from Daily Revenue
     const moGoal=allRv.filter(r=>r['Date']&&r['Date'].startsWith(d.mo)).reduce((s,r)=>s+(n(r['Rooms Goal'])||0),0);
     const rgVar=(d.rooms!=null&&moGoal>0)?d.rooms-moGoal:null;
     tRev+=(d.rev||0); tTgt+=(d.tgt||0); tRooms+=(d.rooms||0); tGoal+=moGoal; tDays+=dim;
@@ -2088,28 +2129,24 @@ function renderRevenue(){
       <td>${occ!=null?occ+'%':'—'}</td>
       <td style="font-weight:600">${revpar!=null?fmt(revpar):'—'}</td></tr>`;
   });
-  // Total row
-  {
-    const tVd=tTgt>1000?tRev-tTgt:null;
-    const tVp=tVd!=null&&tTgt>0?Math.round(tVd/tTgt*100):null;
-    const tRgVar=tGoal>0?Math.round(tRooms)-tGoal:null;
-    const tOcc=tDays>0?Math.round(tRooms/(tDays*ROOMS_TOTAL)*1000)/10:null;
-    const tRevpar=tDays>0&&tRev>0?tRev/(tDays*ROOMS_TOTAL):null;
-    const tAdr=tRooms>0&&tRev>0?tRev/tRooms:null;
-    tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
-      <td style="font-weight:700">Total</td>
-      <td style="font-weight:700">${tRev>0?fmt(tRev):'—'}</td>
-      <td style="font-weight:700">${tTgt>0?fmt(tTgt):'—'}</td>
-      <td style="font-weight:700" class="${tVd==null?'':tVd>=0?'up':'down'}">${tVd!=null?(tVd>=0?'+':'')+fmt(tVd)+' ('+(tVp>=0?'+':'')+tVp+'%)':'—'}</td>
-      <td><span style="font-weight:700">${Math.round(tRooms).toLocaleString()}</span>${tGoal>0?'<span style="color:var(--text2)"> / '+tGoal.toLocaleString()+'</span>':''}${tRgVar!=null?`<div style="font-size:10px;color:${tRgVar>=0?'var(--green)':'var(--red)'}">${tRgVar>=0?'+':''}${tRgVar.toLocaleString()}</div>`:''}</td>
-      <td style="font-weight:700">${tAdr!=null?fmt(tAdr):'—'}</td>
-      <td style="font-weight:700">${tOcc!=null?tOcc+'%':'—'}</td>
-      <td style="font-weight:700">${tRevpar!=null?fmt(tRevpar):'—'}</td>
-    </tr>`;
-  }
-  tbl+='</tbody></table>'; document.getElementById('monthly-tbl').innerHTML=tbl;
-
-  renderDOW();
+  const tVd=tTgt>1000?tRev-tTgt:null;
+  const tVp=tVd!=null&&tTgt>0?Math.round(tVd/tTgt*100):null;
+  const tRgVar=tGoal>0?Math.round(tRooms)-tGoal:null;
+  const tOcc=tDays>0?Math.round(tRooms/(tDays*ROOMS_TOTAL)*1000)/10:null;
+  const tRevpar=tDays>0&&tRev>0?tRev/(tDays*ROOMS_TOTAL):null;
+  const tAdr=tRooms>0&&tRev>0?tRev/tRooms:null;
+  tbl+=`<tr style="border-top:2px solid var(--border2);background:var(--bg2)">
+    <td style="font-weight:700">Total</td>
+    <td style="font-weight:700">${tRev>0?fmt(tRev):'—'}</td>
+    <td style="font-weight:700">${tTgt>0?fmt(tTgt):'—'}</td>
+    <td style="font-weight:700" class="${tVd==null?'':tVd>=0?'up':'down'}">${tVd!=null?(tVd>=0?'+':'')+fmt(tVd)+' ('+(tVp>=0?'+':'')+tVp+'%)':'—'}</td>
+    <td><span style="font-weight:700">${Math.round(tRooms).toLocaleString()}</span>${tGoal>0?'<span style="color:var(--text2)"> / '+tGoal.toLocaleString()+'</span>':''}${tRgVar!=null?`<div style="font-size:10px;color:${tRgVar>=0?'var(--green)':'var(--red)'}">${tRgVar>=0?'+':''}${tRgVar.toLocaleString()}</div>`:''}</td>
+    <td style="font-weight:700">${tAdr!=null?fmt(tAdr):'—'}</td>
+    <td style="font-weight:700">${tOcc!=null?tOcc+'%':'—'}</td>
+    <td style="font-weight:700">${tRevpar!=null?fmt(tRevpar):'—'}</td>
+  </tr>`;
+  tbl+='</tbody></table>';
+  return tbl;
 }
 
 // ── DAY-OF-WEEK ANALYSIS ─────────────────────────────────────────────────────
